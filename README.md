@@ -383,13 +383,14 @@ Consumer (`src/anomaly/kafka_consumer.py`) aligns with Compose topic names `KAFK
 | `src/config.py` | Consolidated pydantic‑settings singleton. |
 | `src/cli.py` | **`agentops`** Typer CLI. |
 | `src/observability/` | OpenTelemetry bootstrap + Prometheus integration glue. |
-| `eval/` | golden sets, Ragas orchestration, offline agent evaluation, calibration, adversarial probes, regression guards, detector JSON outputs. |
-| `scripts/` | Training / benchmarking scripts. |
+| `eval/` | golden sets, Ragas orchestration, retrieval audit, offline agent evaluation, calibration, adversarial probes, regression guards, detector JSON outputs, `results/` artefacts. |
+| `data/docs/volve_real/` | Generated Markdown RAG corpus — field overview + 6 per-well stats documents derived from Volve Excel (Excel itself is gitignored). |
+| `scripts/` | Training / benchmarking / corpus generation scripts. |
 | `tests/unit/` | Unit tests incl. anomaly + safety. |
 | `tests/integration/` | RAG/integration DB bound tests selectively marked. |
 | `.github/workflows/` | `ci.yml`, `eval-gate.yml`. |
 
-Stand-alone ADR markdown files were **removed** from this repo; concise rationale stays in **[Section 19](#19-architectural-rationale-summarised)**.
+Stand-alone ADR markdown files are **not shipped** in this repo; concise rationale is consolidated in **[Section 19](#19-architectural-rationale-summarised)**. The `docs/adr/` directory is reserved for future additions.
 
 ---
 
@@ -484,6 +485,7 @@ Summarised in earlier architecture tables—the critical safety nuance **`inject
 - **Temperature-0 completions** \u2014 deterministic answer generation for reproducible evaluation.
 
 **Committed metrics:** **`eval/detector_performance_v2.json`** is authoritative for anomaly offline experiments\u2014portfolio reviewers expect numbers to reconcile with markdown narrative.
+
 ---
 
 ## 15. Scripts & DVC pipelines
@@ -498,6 +500,7 @@ Summarised in earlier architecture tables—the critical safety nuance **`inject
 | `scripts/bootstrap_golden_docs_corpus.py` | One-time bootstrap: ingests the generated Markdown corpus into Postgres/pgvector. |
 
 `dvc.yaml` documents pipeline edges even if heavyweight binary artefacts remain unstored publicly.
+
 ---
 
 ## 16. Data governance & licences
@@ -566,17 +569,19 @@ Align philosophically with **NORSOK Z‑013**: traceability between analysis inp
 
 ## 20. CI/CD (GitHub Actions)
 
-**`.github/workflows/ci.yml`** (typical precedence):
+**`.github/workflows/ci.yml`** runs 7 parallel jobs on every push to `main`:
 
-| Step | Validates |
-|------|-----------|
-| `lint` | Ruff lint + formatter + strictness friendly mypy invocation on `src/`. |
-| `unit-tests`, `regression-tests`, `adversarial-tests` | Core correctness + resilience probes. |
-| `agent-eval` | Offline behavioural metrics with local file MLflow root to avoid flaky remote dependency. |
-| `model-quality-gate` | Guards registry helper correctness + parses committed detector benchmark JSON tolerant if local data absent clones. |
-| `integration-tests` | Postgres‑backed narrower integration scope (`pytest … -m “not requires_kafka”` style filtering). |
+| Job | What it enforces |
+|-----|-----------------|
+| **Lint (ruff)** | `ruff check` + `ruff format --check` across `src/`, `eval/`, `tests/`; mypy on `src/`. |
+| **Prompt Injection Tests** | Adversarial safety regression battery (`eval/adversarial_tests.py`). |
+| **Agent Evaluation** | Plan quality, escalation calibration, ECE offline metrics (`eval/agent_eval.py`, `eval/calibration.py`). |
+| **Unit Tests** | Anomaly detector correctness, injection guard regressions, schema validation (`tests/unit/`). |
+| **Agent Regression Tests** | Behavioural drift guards — no LLM call required (`eval/regression_tests.py`). |
+| **Model Quality Gate** | MLflow Registry helper correctness + committed detector benchmark JSON consistency. |
+| **Integration Tests** | Postgres-backed RAG and API scope (`tests/integration/`, `not requires_kafka` filtered). |
 
-`eval-gate.yml` complements heavy evaluation regressions gated on secrets posture.
+`eval-gate.yml` gates the Ragas faithfulness \u2265 0.80 check on real Volve data — runs on secrets-enabled contexts (not forks).
 
 ---
 
@@ -670,13 +675,15 @@ docker compose up -d
 # 3 Database
 agentops migrate head    # Alembic; or rely on infra/sql/init.sql on first Postgres boot
 
-# 4 RAG corpus
-mkdir -p data/docs && # add Markdown operational artefacts
+# 4 RAG corpus — generate Markdown docs from real Volve workbook
+mkdir -p "data/Volve_Data"
+# Place: data/Volve_Data/Volve production data.xlsx  (Equinor open data licence)
+python scripts/generate_volve_rag_corpus.py   # → data/docs/volve_real/*.md
+python scripts/bootstrap_golden_docs_corpus.py  # → ingest into Postgres/pgvector
+# Or for custom docs: add Markdown files under data/docs/ then run:
 agentops ingest
 
-# 5 Real telemetry benchmarking (licenced workbook)
-mkdir -p "data/Volve_Data"
-# Copy Volve production workbook per Equinor open data licence
+# 5 Anomaly detector benchmarking
 agentops detector-eval    # delegates to scripts/train_detector_v2.py
 
 # 6 API
@@ -686,8 +693,18 @@ agentops serve --reload    # Swagger UI → http://127.0.0.1:8000/docs
 Evaluation extras:
 
 ```bash
+# RAG faithfulness gate (real Volve data, 39 cases)
+MLFLOW_TRACKING_URI=sqlite:///eval/.mlflow/ragas_tracking.db \
+  python -m eval.ragas_eval --threshold 0.80
+
+# Retrieval source-coverage audit
+python -m eval.rag_retrieval_audit
+
+# Agent + calibration offline checks
 python -m eval.agent_eval --output eval/agent_eval_results.json
 python -m eval.calibration
+
+# Full test suite
 pytest tests/unit tests/integration -v
 ```
 
