@@ -63,6 +63,9 @@ from mlflow.types.schema import ColSpec, Schema
 
 logger = logging.getLogger(__name__)
 
+# MLflow stubs omit `PythonModel` on some versions; getattr avoids dotted-name errors across mypy stubs.
+_PyFuncPythonModel: Any = getattr(mlflow.pyfunc, "PythonModel")  # noqa: B009
+
 # ── Constants ─────────────────────────────────────────────────────────────────
 MODEL_NAME_PREFIX = "northsea-well-anomaly-detector"
 EXPERIMENT_NAME = "northsea-agentops-detector-training"
@@ -138,7 +141,7 @@ class ModelMetrics:
         )
 
 
-class WellDetectorPyfunc(mlflow.pyfunc.PythonModel):  # type: ignore[misc,attr-defined]
+class WellDetectorPyfunc(_PyFuncPythonModel):  # type: ignore[misc]
     """
     MLflow pyfunc wrapper for AdaptiveWellAnomalyDetector.
 
