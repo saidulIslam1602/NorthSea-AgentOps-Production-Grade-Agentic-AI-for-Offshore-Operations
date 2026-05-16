@@ -154,6 +154,9 @@ def test_utc_now_returns_timezone_aware() -> None:
 
     dt = _utc_now()
     assert dt.tzinfo is UTC
+
+
+def test_simulate_blocked_when_app_env_production(monkeypatch: pytest.MonkeyPatch) -> None:
     """Dev-only simulate route returns 403 when route settings report production."""
     import src.api.routes.simulate as sim_mod
     from src.api import main as api_main
