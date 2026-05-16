@@ -178,6 +178,28 @@ async def register_document(
         )
 
 
+async def clear_all(conn: psycopg.AsyncConnection[Any]) -> tuple[int, int]:
+    """Delete all documents and their chunks from the vector store.
+
+    Returns (documents_deleted, chunks_deleted) for confirmation output.
+    Chunks are removed via CASCADE from the documents FK constraint.
+    """
+    async with conn.cursor() as cur:
+        await cur.execute("SELECT COUNT(*) FROM document_chunks")
+        chunks_row = await cur.fetchone()
+        chunks_count: int = chunks_row[0] if chunks_row else 0
+
+        await cur.execute("SELECT COUNT(*) FROM documents")
+        docs_row = await cur.fetchone()
+        docs_count: int = docs_row[0] if docs_row else 0
+
+        # Chunks are deleted automatically via ON DELETE CASCADE.
+        await cur.execute("DELETE FROM documents")
+        await conn.commit()
+
+    return docs_count, chunks_count
+
+
 def stable_document_id(path: str) -> str:
     """Deterministic document ID from file path."""
     return hashlib.sha256(path.encode()).hexdigest()[:16]

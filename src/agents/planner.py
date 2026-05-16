@@ -76,9 +76,9 @@ async def run_planner(state: dict[str, Any]) -> dict[str, Any]:
 
     llm = ChatOpenAI(
         model=settings.openai_model,
-        api_key=settings.openai_api_key.get_secret_value(),
+        api_key=settings.openai_api_key,
         temperature=0.1,
-        response_format={"type": "json_object"},
+        response_format={"type": "json_object"},  # type: ignore[call-arg]  # accepted at runtime; stub lags behind SDK
     )
 
     messages = [
@@ -115,7 +115,7 @@ async def run_planner(state: dict[str, Any]) -> dict[str, Any]:
                 }
             )
 
-        tokens = response.usage_metadata.get("total_tokens", 0) if response.usage_metadata else 0
+        tokens = response.usage_metadata.get("total_tokens", 0) if response.usage_metadata else 0  # type: ignore[attr-defined]
 
         step_record.update(
             {

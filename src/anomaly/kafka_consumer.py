@@ -11,6 +11,7 @@ import asyncio
 import json
 import logging
 from datetime import datetime
+from typing import Any
 
 import pandas as pd
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
@@ -32,9 +33,9 @@ def _get_detector(well_id: str) -> WellAnomalyDetector:
     return _detectors[well_id]
 
 
-def _parse_reading(msg_value: bytes) -> dict | None:
+def _parse_reading(msg_value: bytes) -> dict[str, Any] | None:
     try:
-        data = json.loads(msg_value.decode("utf-8"))
+        data: dict[str, Any] = json.loads(msg_value.decode("utf-8"))
         if "timestamp" in data and isinstance(data["timestamp"], str):
             data["timestamp"] = datetime.fromisoformat(data["timestamp"])
         return data
@@ -103,7 +104,7 @@ class TelemetryProducer:
         if self._producer:
             await self._producer.stop()
 
-    async def send_reading(self, reading: dict) -> None:
+    async def send_reading(self, reading: dict[str, Any]) -> None:
         if not self._producer:
             raise RuntimeError("Producer not started")
         await self._producer.send(settings.kafka_topic_telemetry, value=reading)

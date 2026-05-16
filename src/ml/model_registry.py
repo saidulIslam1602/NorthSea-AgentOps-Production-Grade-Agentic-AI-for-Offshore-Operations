@@ -138,7 +138,7 @@ class ModelMetrics:
         )
 
 
-class WellDetectorPyfunc(mlflow.pyfunc.PythonModel):
+class WellDetectorPyfunc(mlflow.pyfunc.PythonModel):  # type: ignore[misc]
     """
     MLflow pyfunc wrapper for AdaptiveWellAnomalyDetector.
 
@@ -160,7 +160,7 @@ class WellDetectorPyfunc(mlflow.pyfunc.PythonModel):
         with open(detector_path, "rb") as f:
             self._detector_state = pickle.load(f)  # (scaler, iso_forest)
 
-        with open(thresholds_path) as f:
+        with open(thresholds_path) as f:  # type: ignore[assignment]
             self._thresholds = json.load(f)
 
         from src.anomaly.adaptive_detector import AdaptiveWellAnomalyDetector
@@ -195,7 +195,7 @@ class WellDetectorPyfunc(mlflow.pyfunc.PythonModel):
         self,
         context: mlflow.pyfunc.PythonModelContext,
         model_input: pd.DataFrame,
-        params: dict | None = None,
+        params: dict[str, Any] | None = None,
     ) -> pd.DataFrame:
         """
         Score a batch of telemetry readings.
@@ -206,7 +206,7 @@ class WellDetectorPyfunc(mlflow.pyfunc.PythonModel):
         del context, params  # Provided by MLflow pyfunc runner; artefacts already in load_context.
         results = []
         for _, row in model_input.iterrows():
-            reading = {f: float(row.get(f, 0.0)) for f in TELEMETRY_FEATURES}
+            reading: dict[str, Any] = {f: float(row.get(f, 0.0)) for f in TELEMETRY_FEATURES}
             reading["well_id"] = self._detector.well_id
             reading["field_name"] = "VOLVE"
             alert = self._detector.ingest(reading)
@@ -473,7 +473,7 @@ def get_production_model_uri(
 
 def list_all_model_versions(
     tracking_uri: str = "http://localhost:5001",
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """List all registered detector models across all wells with their metrics."""
     client = MlflowClient(tracking_uri=tracking_uri)
     rows = []

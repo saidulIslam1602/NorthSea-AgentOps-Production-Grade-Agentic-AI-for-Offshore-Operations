@@ -127,9 +127,9 @@ async def run_critic(state: dict[str, Any]) -> dict[str, Any]:
 
     llm = ChatOpenAI(
         model=settings.openai_model,
-        api_key=settings.openai_api_key.get_secret_value(),
+        api_key=settings.openai_api_key,
         temperature=0.1,
-        response_format={"type": "json_object"},
+        response_format={"type": "json_object"},  # type: ignore[call-arg]  # accepted at runtime; stub lags behind SDK
     )
 
     messages = [
@@ -141,7 +141,7 @@ async def run_critic(state: dict[str, Any]) -> dict[str, Any]:
         response = await llm.ainvoke(messages)
         content = response.content if isinstance(response.content, str) else str(response.content)
         review = json.loads(content)
-        tokens = response.usage_metadata.get("total_tokens", 0) if response.usage_metadata else 0
+        tokens = response.usage_metadata.get("total_tokens", 0) if response.usage_metadata else 0  # type: ignore[attr-defined]
         total_tokens += tokens
 
         confidence_score = float(review.get("confidence_score", 0.5))

@@ -164,6 +164,31 @@ services:
       timeout: 10s
       retries: 3
 
+  # ─── Kafka Telemetry Consumer ──────────────────────────────────────────────
+  # Runs the anomaly detection worker that consumes well.telemetry messages,
+  # scores them with the adaptive detector, and publishes alerts to well.anomalies.
+  telemetry-consumer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: northsea_telemetry_consumer
+    command: ["python", "-m", "src.anomaly.kafka_consumer"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://northsea:northsea_dev@postgres:5432/northsea_agentops
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_EXPORTER_OTLP_ENABLED: "true"
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    volumes:
+      - ./data:/app/data
+    restart: on-failure
+
 volumes:
   postgres_data:
   prometheus_data:

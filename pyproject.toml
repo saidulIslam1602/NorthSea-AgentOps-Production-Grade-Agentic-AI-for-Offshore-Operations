@@ -77,6 +77,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Production extras (none currently — all runtime deps are in [project.dependencies]).
+# Kept explicit so the Dockerfile can pip install -e ".[prod]" without carrying dev tooling.
+prod = []
+
 dev = [
     "pytest>=8.3.0",
     "pytest-asyncio>=0.24.0",
@@ -115,15 +119,32 @@ ignore = ["ANN401", "S101", "COM812"]
 python_version = "3.11"
 strict = true
 ignore_missing_imports = true
+# eval/ and tests/ are intentionally excluded from strict type checking.
+# eval/ uses third-party RAGAS/MLflow APIs with incomplete stubs; tests/ use
+# pytest fixtures and mocks that don't benefit from strict annotations.
+exclude = ["^eval/", "^tests/", "^scripts/"]
+
+[[tool.mypy.overrides]]
+# eval/ is imported lazily by src/cli.py but contains third-party RAGAS/MLflow
+# calls with incomplete type stubs. Skip rather than annotate around broken stubs.
+module = ["eval.*", "scripts.*"]
+follow_imports = "skip"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-addopts = "--cov=src --cov-report=term-missing --cov-fail-under=70"
+addopts = "--cov=src --cov-report=term-missing --cov-fail-under=85"
 
 [tool.coverage.run]
 source = ["src"]
-# Narrow unit-test aggregation to modules exercised by ``tests/unit/`` until broader integration coverage exists.
+# Coverage strategy: unit tests target pure-logic layers (anomaly detection,
+# safety guards, schemas, config) where behaviour is deterministic and
+# independent of external services. The 85% threshold applies to these layers.
+#
+# I/O-bound layers (agents, API routes, RAG pipeline, Kafka consumer, DB) are
+# covered by the integration-tests job in CI (tests/integration/), which runs
+# against a live Postgres service and does not report to this coverage gate.
+# Mixing the two would inflate or deflate the threshold meaninglessly.
 omit = [
     "src/agents/challenger.py",
     "src/agents/critic.py",

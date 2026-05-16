@@ -319,7 +319,8 @@ Exact order minimizes “works on my machine” ambiguity:
 2. `cp .env.example .env` and provide `OPENAI_API_KEY`. Align `DATABASE_URL` with Compose defaults or your Postgres.  
 3. `pip install -e ".[dev]"`.  
 4. `docker compose up -d` (Postgres/pgvector health, Kafka+Zookeeper, Grafana/Prometheus, MLflow depending on Compose profile).  
-5. Apply schema: `infra/sql/init.sql` (volume mounted on first Postgres boot) **or** `agentops migrate head`.  
+5. Apply schema: `infra/sql/init.sql` (volume mounted on first Postgres boot) **or** `agentops migrate head`.
+   **Keeps duplication honest:** Day‑0 DDL lives in **both** `infra/sql/init.sql` and Alembic `0001_initial_schema`; they are deliberately identical (**idempotent** `CREATE IF NOT EXISTS`). After first boot, evolve the DB **only via new Alembic revisions** (`agentops migrate`) so reviewers see a normal migration lineage; tweak `init.sql` only when you reset volumes or regenerate the bootstrap snapshot to match latest `alembic/versions`.  
 6. Author Markdown under `data/docs/` then `agentops ingest`.  
 7. Place licenced **`data/Volve_Data/Volve production data.xlsx`** (Equinor open data terms apply).  
 8. `python scripts/train_detector_v2.py` or `agentops detector-eval` → refresh `eval/detector_performance_v2.json`.  
@@ -370,7 +371,7 @@ Consumer (`src/anomaly/kafka_consumer.py`) aligns with Compose topic names `KAFK
 
 | Path | Purpose |
 |------|---------|
-| `src/api/` | FastAPI bootstrap (`main.py`) + routers (`routes/investigations.py`, `telemetry.py`, `rag.py`, `escalations.py`). |
+| `src/api/` | FastAPI bootstrap (`main.py`) + routers (`investigations.py`, `telemetry.py`, `rag.py`, `escalations.py`, **`simulate.py`** — dev‑only anomaly simulation). |
 | `src/agents/` | Planner, executor, critic, orchestrator LangGraph compilation, challenger, uncertainty gate, ReAct shortcut, ProductionOptimizer bridging. |
 | `src/anomaly/` | Detector v1 (`detector.py`), v2 (`adaptive_detector.py`), Kafka consumer. |
 | `src/ml/` | MLflow **`model_registry`** and runtime **`DetectorRegistry` loader**. |
@@ -386,9 +387,13 @@ Consumer (`src/anomaly/kafka_consumer.py`) aligns with Compose topic names `KAFK
 | `eval/` | golden sets, Ragas orchestration, retrieval audit, offline agent evaluation, calibration, adversarial probes, regression guards, detector JSON outputs, `results/` artefacts. |
 | `data/docs/volve_real/` | Generated Markdown RAG corpus — field overview + 6 per-well stats documents derived from Volve Excel (Excel itself is gitignored). |
 | `scripts/` | Training / benchmarking / corpus generation scripts. |
-| `tests/unit/` | Unit tests incl. anomaly + safety. |
-| `tests/integration/` | RAG/integration DB bound tests selectively marked. |
-| `.github/workflows/` | `ci.yml`, `eval-gate.yml`. |
+| `tests/unit/` | Anomaly detector, safety, **HTTP API contracts** (`TestClient`: OpenAPI, `/health`, `/metrics`, mocked `investigate`), **LangGraph routing smoke** (`_should_continue_executing`, `initial_state`). |
+| `tests/conftest.py` | **`pytest_configure`** sets a placeholder `OPENAI_API_KEY` when unset so importing the FastAPI app in CI/local does not require a `.env`. |
+| `tests/integration/` | RAG/integration DB‑bound tests; markers for optional Kafka paths. |
+| `alembic/` | Alembic env + **`versions/0001_initial_schema`** (mirrors **`infra/sql/init.sql`** Day‑0 DDL). |
+| `.github/workflows/` | **`ci.yml`** (lint, unit + coverage, regressions, eval gates, Postgres integration); **`eval-gate.yml`**; **`cd.yml`** (build/push **`ghcr.io/northsea-agentops/api`** on semver tags — optional staging patch step). |
+| `Makefile` | Shortcuts for **`make install`**, **`make up/down`**, **`make test/lint/format`**, **`make migrate`** (see **`make help`**). |
+| `.pre-commit-config.yaml` | Ruff lint/format + optional hooks for local parity with CI. |
 
 Stand-alone ADR markdown files are **not shipped** in this repo; concise rationale is consolidated in **[Section 19](#19-architectural-rationale-summarised)**. The `docs/adr/` directory is reserved for future additions.
 
@@ -569,19 +574,21 @@ Align philosophically with **NORSOK Z‑013**: traceability between analysis inp
 
 ## 20. CI/CD (GitHub Actions)
 
-**`.github/workflows/ci.yml`** runs 7 parallel jobs on every push to `main`:
+**`.github/workflows/ci.yml`** — after **Lint**, several jobs fan out in parallel; **Integration** waits on **Lint + Unit**:
 
 | Job | What it enforces |
 |-----|-----------------|
-| **Lint (ruff)** | `ruff check` + `ruff format --check` across `src/`, `eval/`, `tests/`; mypy on `src/`. |
-| **Prompt Injection Tests** | Adversarial safety regression battery (`eval/adversarial_tests.py`). |
-| **Agent Evaluation** | Plan quality, escalation calibration, ECE offline metrics (`eval/agent_eval.py`, `eval/calibration.py`). |
-| **Unit Tests** | Anomaly detector correctness, injection guard regressions, schema validation (`tests/unit/`). |
-| **Agent Regression Tests** | Behavioural drift guards — no LLM call required (`eval/regression_tests.py`). |
-| **Model Quality Gate** | MLflow Registry helper correctness + committed detector benchmark JSON consistency. |
-| **Integration Tests** | Postgres-backed RAG and API scope (`tests/integration/`, `not requires_kafka` filtered). |
+| **Lint (ruff)** | `ruff check` + `ruff format --check` on `src/`, `eval/`, `tests/`; **`mypy`** on `src/` (blocking in CI — see **`[tool.mypy]`** in **`pyproject.toml`** for exclusions such as **`eval.*`** imports from the CLI). |
+| **Unit Tests** | **`tests/unit/`** — anomaly + safety plus **FastAPI/OpenAPI smoke**, **`POST /investigate`** with mocked orchestrator, **`simulate`** guards, deterministic orchestrator routing; coverage gate from **`pyproject.toml`**. |
+| **Agent Regression Tests** | Behavioural drift guards (`eval/regression_tests.py`) — **no LLM**. |
+| **Prompt Injection Tests** | Adversarial safety battery (`eval/adversarial_tests.py`). |
+| **Agent Evaluation** | Plan quality, escalation calibration, ECE (`eval/agent_eval.py`, `eval/calibration.py`). |
+| **Model Quality Gate** | Detector JSON thresholds **when committed** (`eval/detector_performance_v2.json`) + **`model_registry`** invariants (**depends on Agent Evaluation job**). |
+| **Integration Tests** | Postgres + **`infra/sql/init.sql`** + `tests/integration/` (`-m "not requires_kafka"`). |
 
-`eval-gate.yml` gates the Ragas faithfulness \u2265 0.80 check on real Volve data — runs on secrets-enabled contexts (not forks).
+**`eval-gate.yml`** — Ragas faithfulness \u2265 0.80 on **real Volve paths** — requires **`OPENAI_API_KEY`** secret + workbook in tree (typically not on forks).
+
+**`cd.yml`** — on **`v*.*.*` tags**, builds Dockerfile **`production`** target and pushes to **`ghcr.io/northsea-agentops/api`** (see **`infra/k8s/deployment.yaml`** image reference). Wire cluster deploy (`kubectl` / Helm / ArgoCD) in the workflow when you own a registry + cluster.
 
 ---
 
@@ -601,12 +608,14 @@ Align philosophically with **NORSOK Z‑013**: traceability between analysis inp
 
 | Layer | Tooling | Paths |
 |-------|---------|-------|
-| **Unit** | pytest | `tests/unit/` (anomaly correctness, injection guard regressions) |
-| **Integration** | pytest + service containers in CI | `tests/integration/` |
+| **Unit** | pytest | `tests/unit/` — anomaly correctness, injection guard regressions, **deterministic orchestrator routing**, **REST contract tests** (`httpx`/Starlette **`TestClient`**: OpenAPI, `/metrics`, `/health`; **`investigate`** with **`investigate_anomaly` mocked** so CI does not call OpenAI). |
+| **Integration** | pytest + Postgres service in CI | `tests/integration/` (RAG; optional embeddings when `OPENAI_API_KEY` is a real key) |
 | **Eval harness** | JSON golden sets + scripted metrics pipelines | `eval/` |
 | **Quality gates** | GitHub workflows | `.github/workflows/*.yml` |
 
-Target coverage thresholds are enforced via **`pyproject.toml`** → **`[tool.pytest.ini_options]`** together with **`--cov-fail-under`** in pytest **`addopts`**.
+**Interpreter:** **`requires-python`** is **≥ 3.11** (stdlib **`datetime.UTC`**, typing). Use **Python 3.11+** locally to match **`ci.yml`**.
+
+Coverage thresholds (**`--cov-fail-under`**) apply to **unit-instrumented subsets** documented in **`[tool.coverage.run] omit`** in **`pyproject.toml`** — deterministic layers gate at a higher floor; agents/RAG/API I/O-heavy modules lean on integration + offline **`eval`** jobs rather than inflated line coverage theatre.
 
 ---
 
@@ -704,8 +713,10 @@ python -m eval.rag_retrieval_audit
 python -m eval.agent_eval --output eval/agent_eval_results.json
 python -m eval.calibration
 
-# Full test suite
+# Full test suite (requires Python ≥3.11; see Section 22)
 pytest tests/unit tests/integration -v
+# Shortcut (same semantics as CI unit target for local ergonomics):
+# make test
 ```
 
 ---
@@ -723,7 +734,7 @@ Full OpenAPI schemas appear at **`/docs`**. Behavioural summaries:
 | `POST /api/v1/rag/query` | Retrieval augmented QA path |
 | `GET /api/v1/wells/{well_id}/telemetry` | Recent telemetry slice views |
 | `GET/POST /api/v1/escalations` | Operational escalation backlog handling |
-| `POST /api/v1/simulate/anomaly` | Development anomaly injection guarded / environment gated (see router docstrings) |
+| `POST /api/v1/simulate/anomaly` | **Development only** (`APP_ENV != "production"`): synthetic **`AnomalyAlert`** + full investigation pipeline — **403 in production** |
 
 ---
 
@@ -733,4 +744,4 @@ This repository ships **research / portfolio code** authored by contributors. **
 
 ---
 
-_Last README refresh: **2026-05-16** — RAG optimisation cycle complete: hybrid retrieval, field-overview injection, document-title-prefixed context, and Ragas consistency fixes. All evaluation uses real Equinor Volve production data (8,006 daily rows, 6 producer wells). Prefer reconciling behavioural truth with **`git`** history and **`eval/`** artefacts over narrative drift._
+_Last README refresh: **2026-05-16** — adds Alembic bootstrap parity with **`init.sql`**, Compose **telemetry-consumer**, CD workflow (**`ghcr.io/northsea-agentops/api`**), **`Makefile`/pre-commit**, stricter **`mypy`** in CI, and **expanded unit/API + orchestrator routing tests**. RAG story unchanged: hybrid retrieval, field-overview injection, document-title-prefixed context. Prefer reconciling truth with **`git`**, **`eval/`**, and workflow runs over narrative drift._

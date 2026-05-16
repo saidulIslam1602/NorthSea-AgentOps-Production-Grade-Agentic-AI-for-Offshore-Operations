@@ -142,9 +142,9 @@ async def run_challenger(
     """
     llm = ChatOpenAI(
         model=settings.openai_model,
-        api_key=settings.openai_api_key.get_secret_value(),
+        api_key=settings.openai_api_key,
         temperature=0.2,  # slightly higher than Critic to surface alternatives
-        response_format={"type": "json_object"},
+        response_format={"type": "json_object"},  # type: ignore[call-arg]  # accepted at runtime; stub lags behind SDK
     )
 
     evidence_text = "\n\n".join(evidence[:6]) if evidence else "No evidence collected."
@@ -196,7 +196,7 @@ Challenge the Critic's conclusion. Look for what was missed."""
         response = await llm.ainvoke(messages)
         content = response.content if isinstance(response.content, str) else str(response.content)
         challenge = json.loads(content)
-        tokens = response.usage_metadata.get("total_tokens", 0) if response.usage_metadata else 0
+        tokens = response.usage_metadata.get("total_tokens", 0) if response.usage_metadata else 0  # type: ignore[attr-defined]
 
         step_record.update(
             {
@@ -270,9 +270,9 @@ async def run_reconciler(
 
     llm = ChatOpenAI(
         model=settings.openai_mini_model,  # mini model adequate for synthesis
-        api_key=settings.openai_api_key.get_secret_value(),
+        api_key=settings.openai_api_key,
         temperature=0.1,
-        response_format={"type": "json_object"},
+        response_format={"type": "json_object"},  # type: ignore[call-arg]  # accepted at runtime; stub lags behind SDK
     )
 
     prompt = f"""RECONCILIATION TASK:
@@ -303,8 +303,8 @@ Reconcile these two positions into a final assessment."""
     try:
         response = await llm.ainvoke(messages)
         content = response.content if isinstance(response.content, str) else str(response.content)
-        reconciled = json.loads(content)
-        tokens = response.usage_metadata.get("total_tokens", 0) if response.usage_metadata else 0
+        reconciled: dict[str, Any] = json.loads(content)
+        tokens = response.usage_metadata.get("total_tokens", 0) if response.usage_metadata else 0  # type: ignore[attr-defined]
         reconciled["tokens"] = tokens
 
         logger.info(

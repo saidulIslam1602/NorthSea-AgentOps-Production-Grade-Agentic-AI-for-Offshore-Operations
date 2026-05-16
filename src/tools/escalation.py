@@ -33,7 +33,7 @@ async def create_escalation(state: dict[str, Any]) -> EscalationRecord:
 
     record = EscalationRecord(
         escalation_id=uuid4(),
-        investigation_id=investigation_id,
+        investigation_id=investigation_id,  # type: ignore[arg-type]  # state dict value is UUID at runtime
         well_id=alert.well_id,
         reasons=reasons,
         risk_level=risk_level,

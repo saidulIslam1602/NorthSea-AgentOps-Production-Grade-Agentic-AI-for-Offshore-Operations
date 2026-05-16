@@ -243,14 +243,16 @@ def build_investigation_graph(
     async def _output_with_conn(state: dict[str, Any]) -> dict[str, Any]:
         return await _output_node_with_conn(state, conn)
 
-    graph = StateGraph(AgentState)  # type: ignore[arg-type]
+    graph = StateGraph(AgentState)  # type: ignore[type-var]
 
-    graph.add_node("planner", planner_node)
-    graph.add_node("executor", _executor_with_conn)
-    graph.add_node("critic", critic_node)
-    graph.add_node("challenger", challenger_node)  # adversarial multi-agent validation
-    graph.add_node("uncertainty_gate", uncertainty_gate_node)
-    graph.add_node("output", _output_with_conn)
+    # LangGraph's NodeInputT type-var constraint doesn't recognise dict[str, Any] subclasses;
+    # all add_node calls require a suppression until LangGraph ships typed-dict state support.
+    graph.add_node("planner", planner_node)  # type: ignore[type-var]
+    graph.add_node("executor", _executor_with_conn)  # type: ignore[type-var]
+    graph.add_node("critic", critic_node)  # type: ignore[type-var]
+    graph.add_node("challenger", challenger_node)  # type: ignore[type-var]  # adversarial multi-agent validation
+    graph.add_node("uncertainty_gate", uncertainty_gate_node)  # type: ignore[type-var]
+    graph.add_node("output", _output_with_conn)  # type: ignore[type-var]
 
     graph.add_edge(START, "planner")
     graph.add_edge("planner", "executor")

@@ -22,6 +22,7 @@ import hashlib
 import logging
 import re
 from dataclasses import dataclass
+from typing import Any
 
 from src.safety.audit_log import AuditLogger
 
@@ -184,16 +185,16 @@ def check_for_injection(text: str) -> InjectionCheckResult:
 
 
 def sanitise_retrieved_chunks(
-    chunks: list[dict],
+    chunks: list[dict[str, Any]],
     audit_logger: AuditLogger | None = None,
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """
     Sanitise all retrieved document chunks before injection into prompts.
 
     Modifies chunks in place (returns new list with sanitised content).
     Logs any injections found to the audit logger.
     """
-    sanitised_chunks: list[dict] = []
+    sanitised_chunks: list[dict[str, Any]] = []
     injections_found = 0
 
     for chunk in chunks:

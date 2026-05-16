@@ -19,6 +19,7 @@ Usage (in Kafka consumer or API route):
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 import mlflow.pyfunc
 import pandas as pd
@@ -83,7 +84,7 @@ class DetectorRegistry:
         """Return the loaded model for a well, or None if not loaded."""
         return self._models.get(well_id)
 
-    def predict(self, well_id: str, reading: dict) -> pd.DataFrame | None:
+    def predict(self, well_id: str, reading: dict[str, Any]) -> pd.DataFrame | None:
         """
         Score a single telemetry reading for a well.
 
@@ -111,6 +112,6 @@ class DetectorRegistry:
             logger.error("Hot-reload failed for %s: %s", well_id, e)
             return False
 
-    def summary(self) -> list[dict]:
+    def summary(self) -> list[dict[str, Any]]:
         """Return registry status — loaded models and their URIs."""
         return list_all_model_versions(self._tracking_uri)

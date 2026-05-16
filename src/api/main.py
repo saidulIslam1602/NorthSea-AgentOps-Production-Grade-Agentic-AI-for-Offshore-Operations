@@ -26,7 +26,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 
-from src.api.routes import escalations, investigations, rag, telemetry
+from src.api.routes import escalations, investigations, rag, simulate, telemetry
 from src.config import get_settings
 from src.observability.telemetry import setup_telemetry
 
@@ -115,6 +115,7 @@ app.include_router(investigations.router, prefix="/api/v1", tags=["Investigation
 app.include_router(rag.router, prefix="/api/v1", tags=["RAG Copilot"])
 app.include_router(telemetry.router, prefix="/api/v1", tags=["Telemetry"])
 app.include_router(escalations.router, prefix="/api/v1", tags=["Escalations"])
+app.include_router(simulate.router, prefix="/api/v1", tags=["Simulation"])
 
 # ─── Health Check ─────────────────────────────────────────────────────────────
 

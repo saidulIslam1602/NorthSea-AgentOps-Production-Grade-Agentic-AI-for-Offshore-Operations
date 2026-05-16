@@ -16,7 +16,7 @@ from langgraph.graph.message import add_messages
 from src.schemas.domain import AnomalyAlert, Citation, EscalationReason, RiskLevel
 
 
-class AgentState(dict):
+class AgentState(dict[str, Any]):
     """
     Typed state dict for the investigation graph.
 

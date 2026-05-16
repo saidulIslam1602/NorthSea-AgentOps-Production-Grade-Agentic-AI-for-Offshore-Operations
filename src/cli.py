@@ -57,10 +57,28 @@ def ingest(
     clear: bool = typer.Option(False, "--clear", help="Clear existing vectors before ingesting"),
 ) -> None:
     """Ingest documents into the RAG vector store."""
+    import asyncio
+
     from src.rag.ingestion import main as ingest_main
 
     if clear:
-        console.print("[yellow]--clear: truncation of embeddings not implemented; continuing[/yellow]")
+        import psycopg
+
+        from src.config import get_settings
+        from src.rag.vectorstore import clear_all
+
+        settings = get_settings()
+        db_url = settings.database_url.replace("+psycopg", "")
+
+        async def _clear() -> tuple[int, int]:
+            async with await psycopg.AsyncConnection.connect(db_url) as conn:
+                return await clear_all(conn)
+
+        docs_deleted, chunks_deleted = asyncio.run(_clear())
+        console.print(
+            f"[yellow]Cleared vector store:[/yellow] "
+            f"{docs_deleted} document(s), {chunks_deleted} chunk(s) removed."
+        )
 
     console.print(f"[bold]Ingesting documents[/bold] from {docs_dir}")
     ingest_main()

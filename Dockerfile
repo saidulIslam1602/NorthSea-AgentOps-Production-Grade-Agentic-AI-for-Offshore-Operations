@@ -11,14 +11,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev gcc curl && \
     rm -rf /var/lib/apt/lists/*
 
-# ─── Dependencies ─────────────────────────────────────────────────────────────
+# ─── Production dependencies only ─────────────────────────────────────────────
+# Install runtime deps without the [dev] extras (pytest, ruff, mypy, etc.)
+# so the production image stays lean and has no test toolchain attack surface.
 FROM base AS deps
 
 COPY pyproject.toml ./
 RUN pip install --upgrade pip && \
-    pip install -e ".[dev]"
+    pip install -e ".[prod]"
 
-# ─── Production ───────────────────────────────────────────────────────────────
+# ─── Dev dependencies (used by CI / local development only) ───────────────────
+FROM deps AS dev-deps
+
+RUN pip install -e ".[dev]"
+
+# ─── Production image ─────────────────────────────────────────────────────────
 FROM base AS production
 
 COPY --from=deps /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
@@ -26,6 +33,7 @@ COPY --from=deps /usr/local/bin /usr/local/bin
 
 COPY src/ ./src/
 COPY eval/ ./eval/
+COPY alembic/ ./alembic/
 COPY alembic.ini ./
 
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app

@@ -243,9 +243,9 @@ async def run_react(
 
     llm = ChatOpenAI(
         model=settings.openai_model,
-        api_key=settings.openai_api_key.get_secret_value(),
+        api_key=settings.openai_api_key,
         temperature=0.0,  # deterministic for operational queries
-        max_tokens=1024,
+        max_tokens=1024,  # type: ignore[call-arg]  # accepted at runtime; stub lags behind SDK
     )
 
     messages: list[Any] = [
@@ -262,7 +262,7 @@ async def run_react(
         try:
             response = await llm.ainvoke(messages)
             raw_text = response.content if isinstance(response.content, str) else str(response.content)
-            tokens = response.usage_metadata.get("total_tokens", 0) if response.usage_metadata else 0
+            tokens = response.usage_metadata.get("total_tokens", 0) if response.usage_metadata else 0  # type: ignore[attr-defined]
             total_tokens += tokens
         except Exception as exc:
             logger.exception("ReAct LLM call failed at step %d", step_num)

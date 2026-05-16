@@ -33,7 +33,6 @@ jobs:
 
       - name: Run mypy type checker
         run: mypy src/ --ignore-missing-imports --no-error-summary
-        continue-on-error: true
 
   unit-tests:
     name: Unit Tests

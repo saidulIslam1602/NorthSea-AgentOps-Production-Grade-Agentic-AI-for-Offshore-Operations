@@ -149,7 +149,7 @@ def build_investigation_result(state: dict[str, Any]) -> InvestigationResult:
     critic_review: dict[str, Any] = state.get("_critic_review", {})
 
     return InvestigationResult(
-        investigation_id=state.get("investigation_id"),
+        investigation_id=state.get("investigation_id"),  # type: ignore[arg-type]  # UUID set by initial_state
         alert=alert,
         root_cause_hypothesis=state.get("recommendation", "Undetermined"),
         supporting_evidence=critic_review.get("supporting_evidence", state.get("evidence", [])),

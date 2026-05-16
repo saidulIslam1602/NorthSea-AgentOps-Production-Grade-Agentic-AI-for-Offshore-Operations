@@ -114,7 +114,7 @@ async def query_timeseries(
     }
 
 
-def _find_gaps(timestamps: list[datetime], expected_gap_hours: int = 2) -> list[dict[str, str]]:
+def _find_gaps(timestamps: list[datetime], expected_gap_hours: int = 2) -> list[dict[str, Any]]:
     """Find time gaps larger than expected_gap_hours in the timestamp series."""
     if len(timestamps) < 2:
         return []

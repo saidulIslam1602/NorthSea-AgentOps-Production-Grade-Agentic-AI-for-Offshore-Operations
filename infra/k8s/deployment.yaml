@@ -31,7 +31,7 @@ spec:
 
       containers:
         - name: api
-          image: ghcr.io/your-org/northsea-agentops:latest
+          image: ghcr.io/northsea-agentops/api:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8000
