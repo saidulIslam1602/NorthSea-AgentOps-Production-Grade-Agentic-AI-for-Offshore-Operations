@@ -129,9 +129,7 @@ async def audit_retrieval(testset_path: Path) -> dict[str, Any]:
 
     denom_q = query_tp + query_fn
     denom_c = tp_chunk + fp_chunk
-    miss_not_weak = sum(
-        1 for r in rows_out if not r["document_hit_at_least_once"] and not r["weak_evidence"]
-    )
+    miss_not_weak = sum(1 for r in rows_out if not r["document_hit_at_least_once"] and not r["weak_evidence"])
     miss_weak = sum(1 for r in rows_out if not r["document_hit_at_least_once"] and r["weak_evidence"])
     hit_not_weak = sum(1 for r in rows_out if r["document_hit_at_least_once"] and not r["weak_evidence"])
     hit_weak = sum(1 for r in rows_out if r["document_hit_at_least_once"] and r["weak_evidence"])

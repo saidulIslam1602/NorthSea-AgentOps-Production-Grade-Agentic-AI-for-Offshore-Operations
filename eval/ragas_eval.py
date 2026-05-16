@@ -164,7 +164,7 @@ async def _run_single_query(
                     "Each context block begins with [Source: <document name>] so you can attribute facts correctly. "
                     "Answer using ONLY facts that appear explicitly in the Context. "
                     "Copy exact numbers, dates, percentages, and well identifiers verbatim - do not round or rephrase. "
-                    "For questions about a specific well, only report values from that well\'s source blocks. "
+                    "For questions about a specific well, only report values from that well's source blocks. "
                     "For field-wide questions (no specific well named), summarise from all relevant source blocks. "
                     "If the specific fact requested is not present in the Context, reply with exactly: "
                     "Information not available in the knowledge base."
@@ -310,7 +310,9 @@ async def run_ragas_evaluation(
     EVAL_RESULTS_PATH.write_text(json.dumps(results_dict, indent=2))
 
     # Save per-sample scores for diagnosis
-    metric_cols = [c for c in score_df.columns if c in ("faithfulness", "answer_relevancy", "context_precision", "context_recall")]
+    metric_cols = [
+        c for c in score_df.columns if c in ("faithfulness", "answer_relevancy", "context_precision", "context_recall")
+    ]
     per_sample: list[dict[str, Any]] = []
     for i, row_data in enumerate(eval_data):
         entry: dict[str, Any] = {

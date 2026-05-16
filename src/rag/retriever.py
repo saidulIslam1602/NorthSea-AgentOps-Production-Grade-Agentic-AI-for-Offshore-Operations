@@ -114,8 +114,11 @@ def _field_aggregate_query(query: str) -> bool:
     how_many = "how many" in ql or "what number of" in ql
     workbookish = "workbook" in ql or "enumerat" in ql or "enumeration" in ql or "summar" in ql
     aggregates = "field overview" in ql or "pooled across all wells" in ql or "total producing" in ql
-    return (how_many and wells) or (workbookish and wells) or aggregates or (
-        workbookish and "volve" in ql and ("producer" in ql or wells)
+    return (
+        (how_many and wells)
+        or (workbookish and wells)
+        or aggregates
+        or (workbookish and "volve" in ql and ("producer" in ql or wells))
     )
 
 
@@ -124,12 +127,16 @@ def _field_overview_injection_heuristic(query: str) -> bool:
     if _field_aggregate_query(query):
         return True
     ql = query.lower()
-    cross_well_peak = ("which" in ql or "what" in ql or "whose" in ql) and ("well" in ql or "producer" in ql) and (
-        "peak" in ql or "bopd" in ql or "oil rate" in ql or "daily oil" in ql
+    cross_well_peak = (
+        ("which" in ql or "what" in ql or "whose" in ql)
+        and ("well" in ql or "producer" in ql)
+        and ("peak" in ql or "bopd" in ql or "oil rate" in ql or "daily oil" in ql)
     )
-    superlative_well = ("highest" in ql or "lowest" in ql or "maximum" in ql or "minimum" in ql or "max " in ql) and (
-        "well" in ql or "producer" in ql
-    ) and ("peak" in ql or "oil" in ql or "bopd" in ql)
+    superlative_well = (
+        ("highest" in ql or "lowest" in ql or "maximum" in ql or "minimum" in ql or "max " in ql)
+        and ("well" in ql or "producer" in ql)
+        and ("peak" in ql or "oil" in ql or "bopd" in ql)
+    )
     comparison = ("compare" in ql or "rank" in ql or "versus" in ql or " vs " in ql) and (
         "well" in ql or "producer" in ql
     )
@@ -366,9 +373,7 @@ async def retrieve(
         }
     """
     k = top_k or settings.rag_top_k
-    min_fused = (
-        settings.rag_min_fused_score if min_fused_relevance is None else min_fused_relevance
-    )
+    min_fused = settings.rag_min_fused_score if min_fused_relevance is None else min_fused_relevance
     if alpha is not None:
         weight = alpha
     elif _field_overview_injection_heuristic(query):
