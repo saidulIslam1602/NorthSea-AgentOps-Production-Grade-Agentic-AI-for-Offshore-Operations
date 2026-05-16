@@ -59,7 +59,6 @@ import mlflow.sklearn
 import pandas as pd
 from mlflow import MlflowClient
 from mlflow.models import ModelSignature
-from mlflow.pyfunc import PythonModel
 from mlflow.types.schema import ColSpec, Schema
 
 logger = logging.getLogger(__name__)
@@ -139,7 +138,7 @@ class ModelMetrics:
         )
 
 
-class WellDetectorPyfunc(PythonModel):  # type: ignore[misc]
+class WellDetectorPyfunc(mlflow.pyfunc.PythonModel):  # type: ignore[misc,attr-defined]
     """
     MLflow pyfunc wrapper for AdaptiveWellAnomalyDetector.
 
