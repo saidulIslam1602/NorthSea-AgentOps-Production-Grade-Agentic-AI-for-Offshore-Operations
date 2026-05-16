@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import sys
 import time
 from dataclasses import dataclass, field
@@ -531,10 +532,11 @@ def main() -> None:
     )
 
     # Exit non-zero if key thresholds not met
+    max_ece = float(os.environ.get("AGENT_EVAL_MAX_ECE", "0.15"))
     thresholds_met = (
         report.plan_quality_score >= 0.70
         and report.escalation_recall >= 0.85  # safety: must catch 85%+ of real escalations
-        and report.calibration_ece <= 0.15
+        and report.calibration_ece <= max_ece
     )
     sys.exit(0 if thresholds_met else 1)
 

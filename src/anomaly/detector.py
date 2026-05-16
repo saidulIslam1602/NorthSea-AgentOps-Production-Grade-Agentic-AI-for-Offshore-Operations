@@ -85,10 +85,17 @@ class WellAnomalyDetector:
 
         zscores: dict[str, float] = {}
         for feat in TELEMETRY_FEATURES:
-            if feat in reading and not np.isnan(stds.get(feat, np.nan)):
-                zscores[feat] = abs((reading[feat] - means[feat]) / stds[feat])
-            else:
+            if feat not in reading:
                 zscores[feat] = 0.0
+                continue
+            mean_f = float(means.get(feat, 0.0))
+            rv = float(reading[feat])
+            std_raw = float(stds.get(feat, np.nan))
+            if np.isnan(std_raw) or std_raw == 0.0:
+                diff = abs(rv - mean_f)
+                zscores[feat] = 0.0 if diff < 1e-6 else 12.0
+            else:
+                zscores[feat] = abs((rv - mean_f) / std_raw)
 
         return zscores
 
@@ -96,7 +103,7 @@ class WellAnomalyDetector:
         if len(self._buffer) < 50:
             return
 
-        df = self._buffer_df().fillna(method="ffill").dropna()
+        df = self._buffer_df().ffill().dropna()
         if len(df) < 20:
             return
 

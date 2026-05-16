@@ -49,6 +49,14 @@ INJECTION_PATTERNS: list[re.Pattern[str]] = [
         r"(print|output|show|reveal|display)\s+(all|your|the\s+system)\s+(prompt|instructions|key|secret)",
         re.IGNORECASE,
     ),
+    re.compile(
+        r"(print|show|reveal|output)\s+all\s+of\s+your\s+(instructions?|prompt|keys?|secrets?)",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"(print|show|reveal|output)\s+all\s+your\s+(instructions?|prompt|keys?|secrets?)",
+        re.IGNORECASE,
+    ),
     re.compile(r"what\s+(are|is)\s+your\s+(instructions?|system\s+prompt|directive)", re.IGNORECASE),
     re.compile(r"repeat\s+(everything|all|your\s+(instructions?|prompt))", re.IGNORECASE),
     # Action override attempts
@@ -139,15 +147,14 @@ def check_for_injection(text: str) -> InjectionCheckResult:
             input_hash=input_hash,
         )
 
-    # Determine severity
-    critical_keywords = ["ignore previous", "system prompt", "override safety", "bypass"]
+    # Determine severity — scan masked text so allowlisted spans don't FP, and use substring
+    # checks (regex findall entries are often single capture groups, not full phrases).
+    scan_lower = scan_target.lower()
+    critical_keywords = ("ignore previous", "system prompt", "override safety", "bypass")
     severity = "LOW"
-    for kw in critical_keywords:
-        if any(kw in m.lower() for m in matches):
-            severity = "CRITICAL"
-            break
-
-    if severity == "LOW" and len(matches) >= 3:
+    if any(k in scan_lower for k in critical_keywords):
+        severity = "CRITICAL"
+    elif len(matches) >= 3:
         severity = "HIGH"
 
     logger.warning("Prompt injection detected [%s]: %d patterns matched. Hash: %s", severity, len(matches), input_hash)
