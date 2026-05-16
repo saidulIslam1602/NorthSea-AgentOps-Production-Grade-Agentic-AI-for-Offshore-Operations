@@ -52,38 +52,47 @@ def setup_telemetry(app: Any) -> None:
         }
     )
 
+    export_otlp = bool(settings.otel_exporter_otlp_endpoint.strip()) and settings.otel_exporter_otlp_enabled
+
     # ─── Tracing ──────────────────────────────────────────────────────────────
     tracer_provider = TracerProvider(resource=resource)
-    try:
-        span_exporter = OTLPSpanExporter(
-            endpoint=f"{settings.otel_exporter_otlp_endpoint}/v1/traces",
-        )
-        tracer_provider.add_span_processor(BatchSpanProcessor(span_exporter))
-    except Exception:
-        logger.warning("OTLP trace exporter unavailable — traces will not be exported")
+    if export_otlp:
+        try:
+            span_exporter = OTLPSpanExporter(
+                endpoint=f"{settings.otel_exporter_otlp_endpoint.rstrip('/')}/v1/traces",
+            )
+            tracer_provider.add_span_processor(BatchSpanProcessor(span_exporter))
+        except Exception:
+            logger.warning("OTLP trace exporter unavailable — traces will not be exported", exc_info=True)
+    else:
+        logger.info("OTLP trace export disabled (set OTEL_EXPORTER_OTLP_ENABLED=true when a collector is available)")
 
     trace.set_tracer_provider(tracer_provider)
     _tracer = trace.get_tracer(settings.otel_service_name)
 
     # ─── Metrics ──────────────────────────────────────────────────────────────
-    try:
-        metric_reader = PeriodicExportingMetricReader(
-            OTLPMetricExporter(
-                endpoint=f"{settings.otel_exporter_otlp_endpoint}/v1/metrics",
-            ),
-            export_interval_millis=30_000,
-        )
-        meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
-        metrics.set_meter_provider(meter_provider)
-    except Exception:
-        logger.warning("OTLP metric exporter unavailable")
+    if export_otlp:
+        try:
+            metric_reader = PeriodicExportingMetricReader(
+                OTLPMetricExporter(
+                    endpoint=f"{settings.otel_exporter_otlp_endpoint.rstrip('/')}/v1/metrics",
+                ),
+                export_interval_millis=30_000,
+            )
+            meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
+            metrics.set_meter_provider(meter_provider)
+        except Exception:
+            logger.warning("OTLP metric exporter unavailable", exc_info=True)
+            metrics.set_meter_provider(MeterProvider(resource=resource))
+    else:
+        metrics.set_meter_provider(MeterProvider(resource=resource))
 
     _meter = metrics.get_meter(settings.otel_service_name)
 
     # ─── FastAPI instrumentation ───────────────────────────────────────────────
     FastAPIInstrumentor.instrument_app(app)
 
-    logger.info("OpenTelemetry configured: service=%s", settings.otel_service_name)
+    logger.info("OpenTelemetry configured: service=%s otlp_export=%s", settings.otel_service_name, export_otlp)
 
 
 def get_tracer() -> trace.Tracer:

@@ -56,9 +56,8 @@ async def retrieve_documents(
 
     if result["weak_evidence"]:
         context += (
-            "\n\n⚠ NOTE: Source coverage is LOW for this query. "
-            "The retrieved documents may not fully address the question. "
-            "Consider escalating to a human expert."
+            "\n\nNOTE: Retrieval coverage for substantive query terms is below the configured "
+            "evidence gate. Prefer confirming against primary sources or human review before acting."
         )
 
     return {

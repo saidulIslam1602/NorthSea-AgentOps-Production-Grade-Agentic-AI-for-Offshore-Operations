@@ -9,6 +9,7 @@ from uuid import uuid4
 
 import psycopg
 from openai import AsyncOpenAI
+from psycopg.types.json import Json
 
 from src.config import get_settings
 
@@ -35,13 +36,42 @@ async def embed_texts(texts: list[str]) -> list[list[float]]:
     return [item.embedding for item in response.data]
 
 
+def _chunks_for_embedding(
+    chunks: list[dict[str, Any]],
+    *,
+    document_title: str | None,
+    well_id: str | None,
+    field_name: str | None,
+) -> list[str]:
+    """Prefix corpus text seen by embedding so vectors align with retrieval queries mentioning wells/fields."""
+    header_lines: list[str] = []
+    if document_title:
+        header_lines.append(f"Document: {document_title}")
+    if field_name:
+        header_lines.append(f"Field: {field_name}")
+    if well_id:
+        header_lines.append(f"Well: {well_id}")
+    prefix = "\n".join(header_lines)
+    sep = "\n\n" if prefix else ""
+    return [f"{prefix}{sep}{c['content']}" for c in chunks]
+
+
 async def upsert_chunks(
     conn: psycopg.AsyncConnection[Any],
     document_id: str,
     chunks: list[dict[str, Any]],
+    *,
+    document_title: str | None = None,
+    well_id: str | None = None,
+    field_name: str | None = None,
 ) -> None:
-    """Upsert document chunks with embeddings into pgvector store."""
-    texts = [c["content"] for c in chunks]
+    """Upsert document chunks with embeddings into pgvector store (chunk text unchanged; embeddings enriched)."""
+    texts = _chunks_for_embedding(
+        chunks,
+        document_title=document_title,
+        well_id=well_id,
+        field_name=field_name,
+    )
     embeddings = await embed_texts(texts)
 
     async with conn.cursor() as cur:
@@ -143,7 +173,7 @@ async def register_document(
                 well_id,
                 field_name,
                 source_path,
-                metadata or {},
+                Json(metadata if metadata is not None else {}),
             ),
         )
 

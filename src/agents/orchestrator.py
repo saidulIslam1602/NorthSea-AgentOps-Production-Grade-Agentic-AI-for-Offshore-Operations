@@ -14,10 +14,11 @@ Graph structure:
               ↓
            [uncertainty_gate]
               ↓
-           ┌─ escalate? → [escalate]
-           └─ output   → [output]
+           [output]            — persists investigation row first
               ↓
              END
+
+           (If should_escalate, output also persists the escalation queue row.)
 
 Human-in-the-loop checkpoint is placed between critic and uncertainty_gate,
 allowing a human to review the raw evidence before escalation is finalized.
@@ -70,11 +71,6 @@ def _should_continue_executing(state: dict[str, Any]) -> str:
     return "critic"
 
 
-def _escalate_or_output(state: dict[str, Any]) -> str:
-    """Route to escalation queue or direct output."""
-    return "escalate" if state.get("should_escalate", False) else "output"
-
-
 # ─── Node wrappers ────────────────────────────────────────────────────────────
 
 
@@ -102,17 +98,6 @@ def uncertainty_gate_node(state: dict[str, Any]) -> dict[str, Any]:
     return apply_uncertainty_gate(state)
 
 
-async def escalate_node(state: dict[str, Any]) -> dict[str, Any]:
-    """Persist escalation to database and Kafka."""
-    from src.tools.escalation import create_escalation
-
-    try:
-        await create_escalation(state)
-    except Exception:
-        logger.exception("Failed to persist escalation")
-    return state
-
-
 async def _output_node_with_conn(
     state: dict[str, Any],
     conn: psycopg.AsyncConnection[Any],
@@ -121,9 +106,12 @@ async def _output_node_with_conn(
     import json
     import uuid
 
+    from psycopg.types.json import Json
+
     alert: AnomalyAlert = state["alert"]
-    confidence: float = state.get("confidence_score", 0.0)
+    confidence = float(state.get("confidence_score", 0.0))
     investigation_id = state.get("investigation_id") or uuid.uuid4()
+    critic_review = state.get("_critic_review", {})
 
     logger.info(
         "Investigation complete for %s: confidence=%.2f",
@@ -131,39 +119,114 @@ async def _output_node_with_conn(
         confidence,
     )
 
+    inv_uuid = investigation_id if isinstance(investigation_id, uuid.UUID) else uuid.UUID(str(investigation_id))
+
+    hypothesis = (
+        state.get("recommendation")
+        or critic_review.get("root_cause_hypothesis")
+        or critic_review.get("root_cause")
+        or "Undetermined"
+    )
+
+    supporting = critic_review.get("supporting_evidence") or state.get("evidence") or []
+    if isinstance(supporting, str):
+        supporting_evidence = [supporting]
+    elif isinstance(supporting, list):
+        supporting_evidence = [str(s) for s in supporting]
+    else:
+        supporting_evidence = []
+
+    actions_raw = critic_review.get("recommended_actions") or []
+    recommended_actions_pg = (
+        [str(a) for a in actions_raw] if isinstance(actions_raw, list) else ([str(actions_raw)] if actions_raw else [])
+    )
+
+    risk_raw = state.get("risk_level", "MEDIUM")
+    risk_pg = getattr(risk_raw, "value", str(risk_raw))
+
+    reasons_pg: list[str] = []
+    for r in state.get("escalation_reasons") or []:
+        reasons_pg.append(r.value if hasattr(r, "value") else str(r))
+
+    cites_serialized: list[Any] = []
+    for c in state.get("citations") or []:
+        if hasattr(c, "model_dump"):
+            cites_serialized.append(c.model_dump(mode="json"))
+        elif hasattr(c, "__dict__"):
+            cites_serialized.append(json.loads(json.dumps(getattr(c, "__dict__", {}), default=str)))
+        elif isinstance(c, dict):
+            cites_serialized.append(c)
+        else:
+            cites_serialized.append({"repr": str(c)})
+
+    steps_raw = state.get("agent_steps") or []
+    if not isinstance(steps_raw, list):
+        steps_raw = []
+
+    latency_ms_val = float(state.get("latency_ms", 0.0) or 0.0)
+
+    persisted_ok = False
     try:
         async with conn.cursor() as cur:
             await cur.execute(
                 """
-                INSERT INTO investigations
-                    (id, well_id, field_name, severity, root_cause_hypothesis,
-                     recommended_actions, confidence_score, evidence_coverage,
-                     risk_level, should_escalate, escalation_reasons,
-                     citations, total_tokens_used, created_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
-                ON CONFLICT (id) DO NOTHING
+                INSERT INTO investigations (
+                    investigation_id,
+                    well_id,
+                    timestamp,
+                    root_cause_hypothesis,
+                    supporting_evidence,
+                    recommended_actions,
+                    citations,
+                    confidence_score,
+                    evidence_coverage,
+                    risk_level,
+                    should_escalate,
+                    escalation_reasons,
+                    escalation_message,
+                    agent_steps,
+                    total_tokens_used,
+                    latency_ms
+                )
+                VALUES (
+                    %s, %s, %s, %s, %s, %s, %s::jsonb,
+                    %s, %s, %s, %s, %s, %s,
+                    %s::jsonb, %s, %s
+                )
                 """,
                 (
-                    str(investigation_id),
+                    inv_uuid,
                     alert.well_id,
-                    alert.field_name,
-                    alert.severity.value,
-                    state.get("recommendation", "Undetermined"),
-                    json.dumps(state.get("_critic_review", {}).get("recommended_actions", [])),
+                    alert.timestamp,
+                    hypothesis,
+                    supporting_evidence,
+                    recommended_actions_pg,
+                    Json(cites_serialized),
                     confidence,
-                    state.get("evidence_coverage", 0.0),
-                    state.get("risk_level", "MEDIUM"),
-                    state.get("should_escalate", False),
-                    json.dumps([r.value for r in state.get("escalation_reasons", [])]),
-                    json.dumps([c.__dict__ if hasattr(c, "__dict__") else str(c) for c in state.get("citations", [])]),
-                    state.get("total_tokens", 0),
+                    float(state.get("evidence_coverage", 0.0) or 0.0),
+                    risk_pg,
+                    bool(state.get("should_escalate", False)),
+                    reasons_pg,
+                    state.get("escalation_message"),
+                    Json(steps_raw),
+                    int(state.get("total_tokens", 0) or 0),
+                    latency_ms_val,
                 ),
             )
         await conn.commit()
+        persisted_ok = True
     except Exception:
         logger.exception("Failed to persist investigation %s", investigation_id)
 
-    return {**state, "investigation_id": investigation_id}
+    if persisted_ok and state.get("should_escalate"):
+        from src.tools.escalation import create_escalation
+
+        try:
+            await create_escalation({**state, "investigation_id": inv_uuid})
+        except Exception:
+            logger.exception("Failed to persist escalation after investigation")
+
+    return {**state, "investigation_id": inv_uuid}
 
 
 # ─── Graph Builder ────────────────────────────────────────────────────────────
@@ -187,7 +250,6 @@ def build_investigation_graph(
     graph.add_node("critic", critic_node)
     graph.add_node("challenger", challenger_node)  # adversarial multi-agent validation
     graph.add_node("uncertainty_gate", uncertainty_gate_node)
-    graph.add_node("escalate", escalate_node)
     graph.add_node("output", _output_with_conn)
 
     graph.add_edge(START, "planner")
@@ -204,13 +266,7 @@ def build_investigation_graph(
     graph.add_edge("critic", "challenger")
     graph.add_edge("challenger", "uncertainty_gate")
 
-    graph.add_conditional_edges(
-        "uncertainty_gate",
-        _escalate_or_output,
-        {"escalate": "escalate", "output": "output"},
-    )
-
-    graph.add_edge("escalate", END)
+    graph.add_edge("uncertainty_gate", "output")
     graph.add_edge("output", END)
 
     checkpointer = MemorySaver()

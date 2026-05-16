@@ -57,6 +57,8 @@ This **README is the canonical self‑documentation** for the repository: busine
 2. **Interpretation** — **agentic** workflows (Planner → Executor → **Critic** → **Challenger** → **Uncertainty Gate**) that gather evidence via tools (time series query, document RAG, diagnostic stubs) instead of hallucinating causal stories.  
 3. **Governance** — escalation when uncertainty is high or risk is materially relevant; citations for document‑derived claims; observability hooks; MLflow registry and DVC for lineage.
 
+**All RAG evaluation uses real Equinor Volve open-dataset daily production data** — not synthetic placeholders. The six producer wells (15/9-F-1 C, F-5, F-11, F-12, F-14, F-15 D) contribute 8,006 producing-day rows spanning 2008-02-12 to 2016-09-17. The RAG corpus is generated from the Excel workbook via `scripts/generate_volve_rag_corpus.py` and the 39-case golden testset from `scripts/generate_volve_golden_testset.py`.
+
 The project is calibrated around **portfolio and interview depth** while remaining truthful about **daily public data granularity**: the architecture demonstrates how a major operator could wire agents, detectors, and safety layers; absolute detection precision on daily cells alone does not pretend to substitute sub‑daily SCADA in production KPIs ([limitations](#23-honest-limitations--risks)).
 
 ---
@@ -455,15 +457,33 @@ Summarised in earlier architecture tables—the critical safety nuance **`inject
 
 | File | Business question answered |
 |------|-------------------------------|
-| `golden_testset.json` | Controlled Q/A pairs for Retrieval faithfulness regressions vs evolving prompts. |
-| `ragas_eval.py` | “Is grounding degrading?”—logs metrics optionally to MLflow when server reachable. |
-| `agent_eval.py` | “Are agent policies slipping?” surrogate structural checks offline. |
+| `golden_testset.json` | 39 Q/A pairs grounded in **real Volve daily production data** — covers well-specific stats, field-wide aggregates, date ranges, and peak event attribution. |
+| `ragas_eval.py` | "Is RAG grounding meeting the \u2265 0.80 faithfulness gate?"\u2014generates `eval/results/ragas_results.json` (aggregate) and `eval/results/ragas_per_sample.json` (per-case diagnostic). Logs to MLflow when server reachable, falls back to SQLite. |
+| `rag_retrieval_audit.py` | Source-coverage audit: verifies the golden-source document for each test case appears in top-K retrieved chunks. |
+| `agent_eval.py` | "Are agent policies slipping?" surrogate structural checks offline. |
 | `calibration.py` | Calibration error quantification bridging probability statements to observable outcomes in offline harness. |
 | `adversarial_tests.py` | Adversarial safety regression battery. |
 | `regression_tests.py` | Prevents unintended behaviour drift merging via CI gates. |
 
-**Committed metrics:** **`eval/detector_performance_v2.json`** is authoritative for anomaly offline experiments—portfolio reviewers expect numbers to reconcile with markdown narrative.
+### RAG evaluation quality gates
 
+| Metric | Production target | Latest (real Volve, 39 cases) | Notes |
+|--------|------------------|-------------------------------|-------|
+| **Faithfulness** | \u2265 **0.80** | **1.00** \u2705 | Ragas NLI check; context chunks use the same `[Source: <title>]` prefix the LLM saw, preventing false citation-claim failures. |
+| **Context recall** | \u2265 0.80 | **0.846** \u2705 | Hybrid BM25+pgvector RRF + field-overview injection. |
+| **Answer relevancy** | \u2265 0.70 | **0.761** \u2705 | Ragas embedding cosine similarity. |
+| **Context precision** | tracked | 0.454 | Diverse multi-well chunk sets; acceptable for production surveillance. |
+
+**RAG optimisations applied to reach the production faithfulness gate:**
+
+- **Hybrid retrieval (BM25 + pgvector RRF)** \u2014 combines semantic similarity with lexical exact-match; tunable `RAG_HYBRID_ALPHA` (0.0\u202fbBM25-only, 1.0\u202f= vector-only).
+- **Field-overview injection** \u2014 aggregate queries (counting wells, date ranges, peak throughput) automatically prepend the `VOLVE_Field_Overview` document so field-wide statistics land in top-K.
+- **Lexical overlap reranking** \u2014 chunks with higher token overlap with the query receive a bonus via `RAG_LEXICAL_OVERLAP_RERANK_WEIGHT`.
+- **Document-title prefixing** \u2014 each chunk is presented to the LLM as `[Source: <doc name>]\n<content>`, enabling correct cross-well attribution (prevents F-14 data being attributed to F-1 C).
+- **Consistent Ragas context format** \u2014 `retrieved_contexts` passed to Ragas uses the same titled format so citation claims in answers are verified as supported, not falsely penalised.
+- **Temperature-0 completions** \u2014 deterministic answer generation for reproducible evaluation.
+
+**Committed metrics:** **`eval/detector_performance_v2.json`** is authoritative for anomaly offline experiments\u2014portfolio reviewers expect numbers to reconcile with markdown narrative.
 ---
 
 ## 15. Scripts & DVC pipelines
@@ -472,9 +492,12 @@ Summarised in earlier architecture tables—the critical safety nuance **`inject
 |--------|---------------|
 | `scripts/train_detector.py` | Simpler v1 benchmarking path historically useful for demos. |
 | `scripts/train_detector_v2.py` | Authoritative KPI JSON + aggregates + commentary printed to stdout (`register_trained_models` optional MLflow linkage). |
+| `scripts/generate_volve_rag_corpus.py` | Converts the Equinor Volve Excel workbook into per-well Markdown knowledge files (field overview + 6 per-well stats documents) for RAG ingestion. |
+| `scripts/generate_volve_golden_testset.py` | Generates the 39-case `eval/golden_testset.json` from real Volve statistics — questions cover individual well metrics and field-wide aggregates. |
+| `scripts/sync_real_volve_daily_rag.py` | Incremental sync helper: re-generates corpus and re-ingests changed documents without a full rebuild. |
+| `scripts/bootstrap_golden_docs_corpus.py` | One-time bootstrap: ingests the generated Markdown corpus into Postgres/pgvector. |
 
 `dvc.yaml` documents pipeline edges even if heavyweight binary artefacts remain unstored publicly.
-
 ---
 
 ## 16. Data governance & licences
@@ -497,8 +520,14 @@ Copy **`.env.example`** → `.env`. Key knobs (non‑exhaustive—see source for
 | `DATABASE_*` | Pool connectivity for async routes and ingestion. |
 | `KAFKA_*` | Telemetry / anomaly / escalation topic separation—mirrors segregation of reliability concerns operator side. |
 | `AGENT_CONFIDENCE_THRESHOLD` etc. | **Escalation aggressiveness tuning** balancing automation vs nuisance human queueing. |
-| `RAG_*` | Retrieval precision vs breadth + hybrid mixing. |
+| `RAG_TOP_K`, `RAG_HYBRID_ALPHA` | Retrieval breadth and semantic-vs-lexical balance. Alpha 0 = BM25-only, 1.0 = vector-only; defaults tuned for Volve corpus. |
+| `RAG_FIELD_OVERVIEW_INJECT_CHUNKS`, `RAG_FIELD_QUERY_BM25_ALPHA` | Field-overview injection: how many overview chunks to prepend for aggregate queries, and stronger BM25 weighting for those queries. |
+| `RAG_LEXICAL_OVERLAP_RERANK_WEIGHT` | Bonus weight applied to chunks whose tokens overlap highly with the query (helps exact-match stat retrieval). |
+| `RAG_COVERAGE_WEAK_THRESHOLD`, `RAG_EVIDENCE_RELIEF_MIN_COVERAGE` | Weak-evidence detection thresholds; trigger escalation or hedged answers when source coverage is low. |
+| `RAG_COMPLETION_MODEL`, `RAG_EVAL_CONTEXT_CHARS`, `RAGAS_METRIC_MODEL` | Override LLM for answer generation and Ragas metric computation independently of the main agent model. |
 | `MLFLOW_TRACKING_URI` | Local Compose port `5001` mapped externally per `docker-compose.yml`. |
+| `VOLVE_EVAL_IF_N_ESTIMATORS`, `VOLVE_EVAL_PARALLEL_WELLS` | Faster offline detector benchmark: fewer isolation-forest trees; optional multiprocessing (`python scripts/train_detector_v2.py --parallel-wells N` — parallel changes v1 RNG vs sequential). |
+| `RAG_EVAL_GATHER_CONCURRENCY`, `RAGAS_MAX_WORKERS`, `RAGAS_EVAL_TIMEOUT_SECONDS` | Faster RAGAS golden-set phase: concurrent retrieve/completions (`eval/ragas_eval.py --gather-concurrency`) and Ragas metric workers / LLM timeouts. |
 
 ### Local service ports (`docker-compose.yml` highlights)
 
@@ -687,4 +716,4 @@ This repository ships **research / portfolio code** authored by contributors. **
 
 ---
 
-_Last README refresh targets self‑containment for repository archival and hiring use. Prefer reconciling behavioural truth with **`git`** history and **`eval/detector_performance_v2.json`** over narrative drift._
+_Last README refresh: **2026-05-16** — RAG optimisation cycle complete: hybrid retrieval, field-overview injection, document-title-prefixed context, and Ragas consistency fixes. All evaluation uses real Equinor Volve production data (8,006 daily rows, 6 producer wells). Prefer reconciling behavioural truth with **`git`** history and **`eval/`** artefacts over narrative drift._

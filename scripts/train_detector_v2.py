@@ -18,12 +18,16 @@ Business impact framing:
 
 Usage:
     python3 scripts/train_detector_v2.py
+    python3 scripts/train_detector_v2.py --parallel-wells 4          # faster; v1 RNG ≠ serial baseline
+    VOLVE_EVAL_IF_N_ESTIMATORS=100 python3 scripts/train_detector_v2.py
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import logging
+import os
 import sys
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -42,6 +46,9 @@ from src.anomaly.adaptive_detector import AdaptiveWellAnomalyDetector
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
+
+# Isolation Forest trees for VOLVE benchmarking (lower ⇒ faster offline runs).
+EVAL_IF_N_ESTIMATORS = max(50, min(512, int(os.environ.get("VOLVE_EVAL_IF_N_ESTIMATORS", "200"))))
 
 VOLVE_XLSX   = Path("data/Volve_Data/Volve production data.xlsx")
 OUTPUT_JSON  = Path("eval/detector_performance_v2.json")
@@ -300,7 +307,7 @@ def evaluate_one_well(
             min_consecutive=2,
             zscore_window=30,
             if_contamination=0.02,
-            if_n_estimators=200,
+            if_n_estimators=EVAL_IF_N_ESTIMATORS,
             min_train_samples=MIN_TRAIN,
         )
         det.fit(train_df)
@@ -419,7 +426,8 @@ def evaluate_one_well(
         # Re-run to collect economic signals from AdaptiveAlerts
         det2 = AdaptiveWellAnomalyDetector(
             well_id=well_id, target_fpr=0.05, min_consecutive=2,
-            zscore_window=30, if_contamination=0.02, min_train_samples=MIN_TRAIN,
+            zscore_window=30, if_contamination=0.02, if_n_estimators=EVAL_IF_N_ESTIMATORS,
+            min_train_samples=MIN_TRAIN,
         )
         det2.fit(train_df)
         total_oil_loss = 0.0
@@ -491,30 +499,70 @@ def aggregate_results(results: list[WellEvalResult]) -> dict:
 
 
 def main() -> None:
-    logger.info("=== NorthSea AgentOps: Detector v1 vs v2 Evaluation ===")
+    parser = argparse.ArgumentParser(description="Evaluate detector v1 vs v2 on Volve data.")
+    parser.add_argument(
+        "--parallel-wells",
+        type=int,
+        default=max(1, int(os.environ.get("VOLVE_EVAL_PARALLEL_WELLS", "1"))),
+        metavar="N",
+        help="Process up to N wells in parallel. N>1 changes v1 RNG vs default serial stream.",
+    )
+    args = parser.parse_args()
+
+    logger.info(
+        "=== NorthSea AgentOps: Detector v1 vs v2 Evaluation (IF trees=%s) ===",
+        EVAL_IF_N_ESTIMATORS,
+    )
     if not VOLVE_XLSX.exists():
         logger.error("Volve data not found at %s", VOLVE_XLSX); sys.exit(1)
+
+    import scripts.train_detector_v2 as bench_mod
 
     df = load_volve_daily(VOLVE_XLSX, producers_only=True, min_on_stream_hrs=1.0)
     logger.info("Loaded %d rows, %d wells", len(df), df["well_id"].nunique())
 
-    rng = np.random.default_rng(seed=42)
     v1_results: list[WellEvalResult] = []
     v2_results: list[WellEvalResult] = []
 
-    for well_id, well_df in df.groupby("well_id"):
-        logger.info("=== Well: %s ===", well_id)
+    wells: list[tuple[str, pd.DataFrame]] = [
+        (str(wid), part) for wid, part in df.groupby("well_id")
+    ]
 
-        logger.info("  Running v1 (baseline)...")
-        r1 = evaluate_one_well(str(well_id), well_df, rng, is_adaptive=False)
-        if r1:
-            v1_results.append(r1)
+    parallel = max(1, args.parallel_wells)
+    if parallel == 1:
+        rng = np.random.default_rng(seed=42)
+        for wid, well_df in wells:
+            logger.info("=== Well: %s ===", wid)
+            logger.info("  Running v1 (baseline)...")
+            r1 = bench_mod.evaluate_one_well(wid, well_df, rng, is_adaptive=False)
+            if r1:
+                v1_results.append(r1)
+            rng2 = np.random.default_rng(seed=42)
+            logger.info("  Running v2 (adaptive)...")
+            r2 = bench_mod.evaluate_one_well(wid, well_df, rng2, is_adaptive=True)
+            if r2:
+                v2_results.append(r2)
+    else:
+        from eval.train_detector_well_mp import evaluate_well_pair_parallel as _parallel_pair
 
-        rng2 = np.random.default_rng(seed=42)   # same seed → same injection positions
-        logger.info("  Running v2 (adaptive)...")
-        r2 = evaluate_one_well(str(well_id), well_df, rng2, is_adaptive=True)
-        if r2:
-            v2_results.append(r2)
+        n_w = len(wells)
+        workers = min(parallel, n_w) if n_w else 1
+        logger.warning(
+            "Parallel well eval (%s workers): v1 RNG is per-well; compare to sequential with --parallel-wells 1.",
+            workers,
+        )
+        out: dict[str, tuple[Optional[WellEvalResult], Optional[WellEvalResult]]] = {}
+        with ProcessPoolExecutor(max_workers=workers) as pool:
+            futs = {pool.submit(_parallel_pair, item): item[0] for item in wells}
+            for fut in as_completed(futs):
+                wid, r1, r2 = fut.result()
+                out[wid] = (r1, r2)
+        for wid, _ in wells:
+            r1, r2 = out[wid]
+            if r1:
+                v1_results.append(r1)
+            if r2:
+                v2_results.append(r2)
 
     if not v1_results:
         logger.error("No results"); sys.exit(1)
@@ -631,7 +679,9 @@ def register_trained_models(
             # Re-fit a fresh detector (same seed) — this is the model we register
             det = AdaptiveWellAnomalyDetector(
                 well_id=well_id, target_fpr=0.05, min_consecutive=2,
-                zscore_window=30, if_contamination=0.02, min_train_samples=MIN_TRAIN,
+                zscore_window=30, if_contamination=0.02,
+                if_n_estimators=EVAL_IF_N_ESTIMATORS,
+                min_train_samples=MIN_TRAIN,
             )
             det.fit(train_df)
 

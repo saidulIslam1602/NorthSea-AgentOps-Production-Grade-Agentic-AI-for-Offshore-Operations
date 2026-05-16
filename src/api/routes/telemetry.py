@@ -18,7 +18,7 @@ settings = get_settings()
 
 
 @router.get(
-    "/wells/{well_id}/telemetry",
+    "/wells/{well_id:path}/telemetry",
     summary="Get recent well telemetry",
 )
 async def get_well_telemetry(

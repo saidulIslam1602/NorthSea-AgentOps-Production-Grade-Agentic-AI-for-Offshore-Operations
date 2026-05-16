@@ -147,6 +147,7 @@ services:
       DATABASE_URL: postgresql+psycopg://northsea:northsea_dev@postgres:5432/northsea_agentops
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_EXPORTER_OTLP_ENABLED: "true"
       MLFLOW_TRACKING_URI: http://mlflow:5000
     env_file:
       - .env

@@ -1,0 +1,295 @@
+{
+  "golden_path": "/home/saidul/Desktop/NorthSea AgentOps: Production-Grade Agentic AI for Offshore Operations/eval/golden_testset.json",
+  "num_queries_with_gold_sources": 39,
+  "query_true_positive_hit": 39,
+  "query_false_negative_miss": 0,
+  "retrieval_recall": 1.0,
+  "chunk_true_positive_supporting_chunks": 158,
+  "chunk_false_positive_other_chunks": 388,
+  "chunk_precision": 0.2893772893772894,
+  "hits_marked_weak_evidence": 9,
+  "misses_marked_weak_evidence": 0,
+  "cross_tab_retrieval_hit_vs_weak_gate": {
+    "hit_and_weak_evidence": 9,
+    "hit_and_not_weak": 30,
+    "miss_and_weak_evidence": 0,
+    "miss_and_not_weak": 0
+  },
+  "interpretation_miss_not_weak_FP_style": "miss_and_not_weak = retrieval missed all gold filenames but gate did NOT flag weak evidence (mis-calibrated optimism). miss_and_weak = consistent miss + weak gate (honest skepticism).",
+  "per_query": [
+    {
+      "id": "VGT-001",
+      "document_hit_at_least_once": true,
+      "chunks_returned": 14,
+      "weak_evidence": false,
+      "source_coverage": 0.5
+    },
+    {
+      "id": "VGT-002",
+      "document_hit_at_least_once": true,
+      "chunks_returned": 14,
+      "weak_evidence": false,
+      "source_coverage": 0.4286
+    },
+    {
+      "id": "VGT-003",
+      "document_hit_at_least_once": true,
+      "chunks_returned": 14,
+      "weak_evidence": false,
+      "source_coverage": 0.5
+    },
+    {
+      "id": "VGT-004",
+      "document_hit_at_least_once": true,
+      "chunks_returned": 14,
+      "weak_evidence": false,
+      "source_coverage": 0.25
+    },
+    {
+      "id": "VGT-005",
+      "document_hit_at_least_once": true,
+      "chunks_returned": 14,
+      "weak_evidence": false,
+      "source_coverage": 0.5455
+    },
+    {
+      "id": "VGT-006",
+      "document_hit_at_least_once": true,
+      "chunks_returned": 14,
+      "weak_evidence": false,
+      "source_coverage": 0.4444
+    },
+    {
+      "id": "VGT-007",
+      "document_hit_at_least_once": true,
+      "chunks_returned": 14,
+      "weak_evidence": false,
+      "source_coverage": 0.5556
+    },
+    {
+      "id": "VGT-008",
+      "document_hit_at_least_once": true,
+      "chunks_returned": 14,
+      "weak_evidence": true,
+      "source_coverage": 0.125
+    },
+    {
+      "id": "VGT-009",
+      "document_hit_at_least_once": true,
+      "chunks_returned": 14,
+      "weak_evidence": false,
+      "source_coverage": 0.4
+    },
+    {
+      "id": "VGT-010",
+      "document_hit_at_least_once": true,
+      "chunks_returned": 14,
+      "weak_evidence": false,
+      "source_coverage": 0.3333
+    },
+    {
+      "id": "VGT-011",
+      "document_hit_at_least_once": true,
+      "chunks_returned": 14,
+      "weak_evidence": false,
+      "source_coverage": 0.7273
+    },
+    {
+      "id": "VGT-012",
+      "document_hit_at_least_once": true,
+      "chunks_returned": 14,
+      "weak_evidence": false,
+      "source_coverage": 0.4444
+    },
+    {
+      "id": "VGT-013",
+      "document_hit_at_least_once": true,
+      "chunks_returned": 14,
+      "weak_evidence": true,
+      "source_coverage": 0.2222
+    },
+    {
+      "id": "VGT-014",
+      "document_hit_at_least_once": true,
+      "chunks_returned": 14,
+      "weak_evidence": true,
+      "source_coverage": 0.125
+    },
+    {
+      "id": "VGT-015",
+      "document_hit_at_least_once": true,
+      "chunks_returned": 14,
+      "weak_evidence": false,
+      "source_coverage": 0.5
+    },
+    {
+      "id": "VGT-016",
+      "document_hit_at_least_once": true,
+      "chunks_returned": 14,
+      "weak_evidence": false,
+      "source_coverage": 0.4444
+    },
+    {
+      "id": "VGT-017",
+      "document_hit_at_least_once": true,
+      "chunks_returned": 14,
+      "weak_evidence": false,
+      "source_coverage": 0.7273
+    },
+    {
+      "id": "VGT-018",
+      "document_hit_at_least_once": true,
+      "chunks_returned": 14,
+      "weak_evidence": false,
+      "source_coverage": 0.4444
+    },
+    {
+      "id": "VGT-019",
+      "document_hit_at_least_once": true,
+      "chunks_returned": 14,
+      "weak_evidence": true,
+      "source_coverage": 0.2222
+    },
+    {
+      "id": "VGT-020",
+      "document_hit_at_least_once": true,
+      "chunks_returned": 14,
+      "weak_evidence": true,
+      "source_coverage": 0.125
+    },
+    {
+      "id": "VGT-021",
+      "document_hit_at_least_once": true,
+      "chunks_returned": 14,
+      "weak_evidence": false,
+      "source_coverage": 0.5
+    },
+    {
+      "id": "VGT-022",
+      "document_hit_at_least_once": true,
+      "chunks_returned": 14,
+      "weak_evidence": false,
+      "source_coverage": 0.4444
+    },
+    {
+      "id": "VGT-023",
+      "document_hit_at_least_once": true,
+      "chunks_returned": 14,
+      "weak_evidence": false,
+      "source_coverage": 0.7273
+    },
+    {
+      "id": "VGT-024",
+      "document_hit_at_least_once": true,
+      "chunks_returned": 14,
+      "weak_evidence": false,
+      "source_coverage": 0.4444
+    },
+    {
+      "id": "VGT-025",
+      "document_hit_at_least_once": true,
+      "chunks_returned": 14,
+      "weak_evidence": true,
+      "source_coverage": 0.2222
+    },
+    {
+      "id": "VGT-026",
+      "document_hit_at_least_once": true,
+      "chunks_returned": 14,
+      "weak_evidence": true,
+      "source_coverage": 0.125
+    },
+    {
+      "id": "VGT-027",
+      "document_hit_at_least_once": true,
+      "chunks_returned": 14,
+      "weak_evidence": false,
+      "source_coverage": 0.5
+    },
+    {
+      "id": "VGT-028",
+      "document_hit_at_least_once": true,
+      "chunks_returned": 14,
+      "weak_evidence": false,
+      "source_coverage": 0.4444
+    },
+    {
+      "id": "VGT-029",
+      "document_hit_at_least_once": true,
+      "chunks_returned": 14,
+      "weak_evidence": false,
+      "source_coverage": 0.7273
+    },
+    {
+      "id": "VGT-030",
+      "document_hit_at_least_once": true,
+      "chunks_returned": 14,
+      "weak_evidence": false,
+      "source_coverage": 0.4444
+    },
+    {
+      "id": "VGT-031",
+      "document_hit_at_least_once": true,
+      "chunks_returned": 14,
+      "weak_evidence": false,
+      "source_coverage": 0.5556
+    },
+    {
+      "id": "VGT-032",
+      "document_hit_at_least_once": true,
+      "chunks_returned": 14,
+      "weak_evidence": false,
+      "source_coverage": 0.25
+    },
+    {
+      "id": "VGT-033",
+      "document_hit_at_least_once": true,
+      "chunks_returned": 14,
+      "weak_evidence": false,
+      "source_coverage": 0.5
+    },
+    {
+      "id": "VGT-034",
+      "document_hit_at_least_once": true,
+      "chunks_returned": 14,
+      "weak_evidence": false,
+      "source_coverage": 0.4444
+    },
+    {
+      "id": "VGT-035",
+      "document_hit_at_least_once": true,
+      "chunks_returned": 14,
+      "weak_evidence": false,
+      "source_coverage": 0.5455
+    },
+    {
+      "id": "VGT-036",
+      "document_hit_at_least_once": true,
+      "chunks_returned": 14,
+      "weak_evidence": false,
+      "source_coverage": 0.4444
+    },
+    {
+      "id": "VGT-037",
+      "document_hit_at_least_once": true,
+      "chunks_returned": 14,
+      "weak_evidence": true,
+      "source_coverage": 0.2222
+    },
+    {
+      "id": "VGT-038",
+      "document_hit_at_least_once": true,
+      "chunks_returned": 14,
+      "weak_evidence": true,
+      "source_coverage": 0.125
+    },
+    {
+      "id": "VGT-039",
+      "document_hit_at_least_once": true,
+      "chunks_returned": 14,
+      "weak_evidence": false,
+      "source_coverage": 0.4
+    }
+  ],
+  "definitions": "query TP = \u22651 retrieved chunk basename matches testcase document_sources; FN = zero matches. chunk TP/FP classify each returned chunk vs that testcase sources. Traditional TN (true absence of positives) requires negative queries not in golden_set. Use cross-tab rows as proxy: miss+weak behaves like guarded negative outcome; miss+not_weak is analogous to FP on the operational weak_evidence gate when gold existed."
+}

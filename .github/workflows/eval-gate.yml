@@ -7,6 +7,8 @@ on:
     paths:
       - "src/rag/**"
       - "src/agents/**"
+      - "scripts/generate_volve*.py"
+      - "scripts/sync_real_volve_daily_rag.py"
       - "data/docs/**"
       - "eval/**"
   schedule:
@@ -65,19 +67,19 @@ jobs:
         run: |
           psql -h localhost -U northsea -d northsea_eval -f infra/sql/init.sql
 
-      - name: Generate synthetic documents
+      - name: Real Volve RAG + golden reload (needs workbook under data/Volve_Data/)
         env:
           DATABASE_URL: "postgresql+psycopg://northsea:northsea_eval@localhost:5432/northsea_eval"
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          MLFLOW_TRACKING_URI: "sqlite:///mlflow_eval.db"
         run: |
-          python -m src.data.doc_generator
-
-      - name: Ingest documents into pgvector
-        env:
-          DATABASE_URL: "postgresql+psycopg://northsea:northsea_eval@localhost:5432/northsea_eval"
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: |
-          python -m src.rag.ingestion --docs-dir data/docs
+          set -euo pipefail
+          XLSX='data/Volve_Data/Volve production data.xlsx'
+          if [[ ! -f "$XLSX" ]]; then
+            echo "::error::Missing $XLSX — CI cannot run VOLVE-aligned RAGAS. Add workbook to checkout or populate via authenticated download step."
+            exit 1
+          fi
+          python scripts/sync_real_volve_daily_rag.py
 
       - name: Run RAGAS evaluation
         env:

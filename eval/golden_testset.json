@@ -1,396 +1,509 @@
 [
   {
-    "id": "GT-001",
-    "category": "water_breakthrough",
-    "question": "What happened to Volve well 15/9-F-4 during the water breakthrough incident in March 2024?",
-    "expected_topics": ["water cut", "61%", "aquifer", "fracture", "injector"],
-    "ground_truth": "Well 15/9-F-4 experienced rapid water cut increase from 18% to 61% over 72 hours, driven by premature aquifer breakthrough through a fracture network connecting to injector 15/9-F-11H. Choke was reduced and production fell from 2200 to 870 BOPD.",
-    "document_sources": ["WR-002_Volve_F4_WaterBreakthrough_2024.md"]
+    "id": "VGT-001",
+    "category": "field_overview",
+    "question": "Between which calendar dates does the VOLVE field overview summarise daily production excerpts?",
+    "expected_topics": [
+      "2008-02-12",
+      "2016-09-17"
+    ],
+    "ground_truth": "VOLVE overview excerpts summarise data from **2008-02-12** through **2016-09-17**.",
+    "document_sources": [
+      "VOLVE_Field_Overview_RealDailyProduction.md"
+    ]
   },
   {
-    "id": "GT-002",
-    "category": "liquid_loading",
-    "question": "How is liquid loading diagnosed in a gas-lifted well and what are the recommended remediation steps?",
-    "expected_topics": ["Turner", "critical velocity", "gas lift", "wellhead pressure", "coiled tubing"],
-    "ground_truth": "Liquid loading is diagnosed when calculated tubing velocity falls below Turner's critical velocity, typically indicated by declining oil rate, rising WHP, and erratic slugging. Remediation includes increasing gas lift injection rate, velocity string installation, and potentially ESP conversion.",
-    "document_sources": ["WR-003_Gullfaks_GFA2H_LiquidLoading_2024.md", "EQ-004_Gas_Lift_System_Manual.md"]
+    "id": "VGT-002",
+    "category": "field_overview",
+    "question": "How many VOLVE wells are enumerated in workbook-derived production summaries?",
+    "expected_topics": [
+      "well"
+    ],
+    "ground_truth": "The VOLVE ingestion enumerates **6** producer wells.",
+    "document_sources": [
+      "VOLVE_Field_Overview_RealDailyProduction.md"
+    ]
   },
   {
-    "id": "GT-003",
-    "category": "separator_upset",
-    "question": "What caused the GOR spike on Draugen D-3H in February 2024 and how was it resolved?",
-    "expected_topics": ["separator", "LIC-101", "level controller", "solenoid", "metering artefact"],
-    "ground_truth": "The apparent GOR spike on D-3H was caused by a level controller (LIC-101) solenoid valve failure that caused gas carryover to the oil metering train. The GOR spike was a metering artefact, not a real downhole change. The solenoid was replaced and production was restored within 10 hours.",
-    "document_sources": ["WR-005_Draugen_D3H_SeparatorUpset_2024.md", "EQ-001_Three_Phase_Separator_Operations.md"]
+    "id": "VGT-003",
+    "category": "field_overview",
+    "question": "Which VOLVE well shows the highest peak daily oil in the excerpts, and roughly what magnitude?",
+    "expected_topics": [
+      "peak",
+      "BOPD"
+    ],
+    "ground_truth": "Highest workbook peak belongs to **15/9-F-12** at about **37121.5 BOPD**.",
+    "document_sources": [
+      "VOLVE_Field_Overview_RealDailyProduction.md",
+      "Volve_RealDaily_15-9-F-12.md"
+    ]
   },
   {
-    "id": "GT-004",
-    "category": "esp_failure",
-    "question": "What caused the ESP failure on Draugen D-2H and what prevention measures were implemented?",
-    "expected_topics": ["scale", "overtemperature", "inhibitor", "pump stages", "motor"],
-    "ground_truth": "The D-2H ESP tripped due to scale deposition on pump stages that increased motor load by 22%, causing overtemperature (185°C vs 165°C limit). Prevention included increasing scale inhibitor injection from 15 to 25 ppm and scheduling quarterly DTS monitoring.",
-    "document_sources": ["WR-011_Draugen_D2H_ESPFailure.md", "EQ-002_ESP_Operation_Manual.md"]
+    "id": "VGT-004",
+    "category": "field_overview",
+    "question": "How many producing-day observations were pooled across all wells before chunking?",
+    "expected_topics": [
+      "rows"
+    ],
+    "ground_truth": "The workbook extract pools **8006** producing-day observations across wells.",
+    "document_sources": [
+      "VOLVE_Field_Overview_RealDailyProduction.md"
+    ]
   },
   {
-    "id": "GT-005",
-    "category": "hse",
-    "question": "What are the mandatory escalation triggers for production anomalies per the HSE procedure?",
-    "expected_topics": ["BHP decline", "water cut", "150 psi", "15%", "human escalation", "HSE-OPS-001"],
-    "ground_truth": "Per HSE-OPS-001, mandatory escalation triggers include: BHP decline >150 psi/week, water cut increase >15% in 24 hours, sustained casing pressure increase >20 psi/hour, GOR increase >300 scf/bbl in 48 hours, and any anomaly where root cause cannot be confirmed.",
-    "document_sources": ["HSE-001_Production_Anomaly_Response_Procedure.md"]
+    "id": "VGT-005",
+    "category": "production_metrics",
+    "question": "What peak daily oil rate (BOPD) appears for VOLVE producer 15/9-F-1 C in the workbook-backed summary?",
+    "expected_topics": [
+      "BOPD",
+      "peak",
+      "oil"
+    ],
+    "ground_truth": "Peak oil for 15/9-F-1 C is 9748.0 BOPD on 2014-04-24, water cut roughly 0.0 %.",
+    "document_sources": [
+      "Volve_RealDaily_15-9-F-1_C.md",
+      "VOLVE_Field_Overview_RealDailyProduction.md"
+    ]
   },
   {
-    "id": "GT-006",
-    "category": "choke_failure",
-    "question": "What happened when the choke valve failed on Draugen D-4AH and what was the root cause?",
-    "expected_topics": ["choke", "actuator", "seal failure", "640 BOPD", "position sensor"],
-    "ground_truth": "The D-4AH production choke failed in partially closed position (20/64\"), reducing production from 2200 to 640 BOPD. Root cause was a hydraulic actuator seal failure. A precursor (position sensor calibration issue) was noted in the February maintenance inspection.",
-    "document_sources": ["WR-007_Draugen_D4AH_ChokeFailed.md", "ML-001_Draugen_ChristmasTree_Inspection.md"]
+    "id": "VGT-006",
+    "category": "production_metrics",
+    "question": "What producing-day date range covers well 15/9-F-1 C in ingested VOLVE excerpts?",
+    "expected_topics": [
+      "2014-04-22",
+      "2016-04-06"
+    ],
+    "ground_truth": "15/9-F-1 C has producing-day excerpts from 2014-04-22 through 2016-04-06.",
+    "document_sources": [
+      "Volve_RealDaily_15-9-F-1_C.md",
+      "VOLVE_Field_Overview_RealDailyProduction.md"
+    ]
   },
   {
-    "id": "GT-007",
-    "category": "water_management",
-    "question": "At what water cut level is a North Sea well considered to be approaching its economic limit?",
-    "expected_topics": ["economic limit", "80%", "OPEX", "workover", "abandonment"],
-    "ground_truth": "At water cut above 80% with 5000 BLPD total liquid, oil production is approximately 1000 BOPD. With typical North Sea OPEX of $25-35/bbl, the break-even oil price becomes ~$60/bbl. Above this water cut level, wells are candidates for workover or abandonment analysis.",
-    "document_sources": ["WR-015_NorthSea_WaterCut_BestPractices.md"]
+    "id": "VGT-007",
+    "category": "production_metrics",
+    "question": "What average water-cut percentage appears across producing rows summarised for 15/9-F-1 C?",
+    "expected_topics": [
+      "water cut"
+    ],
+    "ground_truth": "Average producing-day water cut for 15/9-F-1 C is about 51.0% over 429 summarised producing rows.",
+    "document_sources": [
+      "Volve_RealDaily_15-9-F-1_C.md"
+    ]
   },
   {
-    "id": "GT-008",
-    "category": "pressure_analysis",
-    "question": "What does a GOR increase above 300 scf/bbl in 48 hours indicate for a North Sea well?",
-    "expected_topics": ["gas coning", "bubble point", "separator", "mandatory escalation"],
-    "ground_truth": "A GOR increase of more than 300 scf/bbl in 48 hours is a mandatory escalation trigger per HSE-OPS-001. It may indicate gas coning (approaching bubble point), separator malfunction (as seen in D-3H incident), or tubing integrity issues above a gas-lift mandrel.",
-    "document_sources": ["HSE-001_Production_Anomaly_Response_Procedure.md", "WR-006_Volve_F5_GOR_Investigation.md"]
+    "id": "VGT-008",
+    "category": "production_metrics",
+    "question": "What maximum water-cut percentage is summarised for producer 15/9-F-1 C and on what date did it occur?",
+    "expected_topics": [
+      "water cut"
+    ],
+    "ground_truth": "Highest summarised water cut for 15/9-F-1 C is roughly 96.3% on 2016-01-05, with oil rate about 205.5 BOPD.",
+    "document_sources": [
+      "Volve_RealDaily_15-9-F-1_C.md"
+    ]
   },
   {
-    "id": "GT-009",
-    "category": "maintenance",
-    "question": "What maintenance issue was found on D-4AH's Christmas tree in February 2024?",
-    "expected_topics": ["actuator", "feedback sensor", "position", "calibration", "choke"],
-    "ground_truth": "During the February 2024 Christmas tree inspection, D-4AH's choke actuator position sensor was found reading ±3% from reference and was recalibrated. This sensor issue was subsequently identified as the precursor to the choke failure on March 22, 2024.",
-    "document_sources": ["ML-001_Draugen_ChristmasTree_Inspection.md"]
+    "id": "VGT-009",
+    "category": "production_metrics",
+    "question": "What mean gas-oil ratio (scf/bbl) summarises producer 15/9-F-1 C in the VOLVE workbook-derived text?",
+    "expected_topics": [
+      "GOR",
+      "scf/bbl"
+    ],
+    "ground_truth": "Mean GOR across producing rows for 15/9-F-1 C is roughly 849 scf/bbl.",
+    "document_sources": [
+      "Volve_RealDaily_15-9-F-1_C.md"
+    ]
   },
   {
-    "id": "GT-010",
-    "category": "h2s",
-    "question": "What are the H2S alarm levels on production facilities and what actions are required at each level?",
-    "expected_topics": ["5 ppm", "20 ppm", "50 ppm", "SCBA", "evacuation", "muster"],
-    "ground_truth": "H2S alarm levels: A1 at 5 ppm (warning, check equipment), A2 at 10 ppm (don SCBA, investigate), A3 at 20 ppm (muster, non-essential leave area), A4 at 50 ppm (full evacuation). This is per HSE-OPS-002.",
-    "document_sources": ["HSE-002_H2S_Management.md"]
+    "id": "VGT-010",
+    "category": "production_metrics",
+    "question": "What approximate mean bottom-hole pressure (psi) summary exists for producer 15/9-F-1 C?",
+    "expected_topics": [
+      "BHP"
+    ],
+    "ground_truth": "Mean reporting BHP among producing rows summarised for 15/9-F-1 C is about 3346 psi.",
+    "document_sources": [
+      "Volve_RealDaily_15-9-F-1_C.md"
+    ]
   },
   {
-    "id": "GT-011",
-    "category": "esd",
-    "question": "Can an AI system recommend ESD activation or well restart after ESD?",
-    "expected_topics": ["AI limitation", "human authorisation", "not authorised", "ESD"],
-    "ground_truth": "No. Per HSE-OPS-005, automated AI systems and digital assistants are explicitly NOT authorised to recommend ESD activation or restart after ESD. All such decisions require qualified human engineer authorisation.",
-    "document_sources": ["HSE-005_Emergency_Shutdown_Procedure.md"]
+    "id": "VGT-011",
+    "category": "production_metrics",
+    "question": "What peak daily oil rate (BOPD) appears for VOLVE producer 15/9-F-11 in the workbook-backed summary?",
+    "expected_topics": [
+      "BOPD",
+      "peak",
+      "oil"
+    ],
+    "ground_truth": "Peak oil for 15/9-F-11 is 12986.0 BOPD on 2015-03-21, water cut roughly 26.3 %.",
+    "document_sources": [
+      "Volve_RealDaily_15-9-F-11.md",
+      "VOLVE_Field_Overview_RealDailyProduction.md"
+    ]
   },
   {
-    "id": "GT-012",
-    "category": "moc",
-    "question": "What choke setting changes require a Management of Change approval?",
-    "expected_topics": ["MOC", "20%", "operations foreman", "production engineer", "single step"],
-    "ground_truth": "Per HSE-OPS-007, choke setting changes of more than 20% in a single step require MOC. Minor adjustments (<10%) require Operations Foreman approval. Changes of 10-20% require Production Engineer approval. Major changes (>20%) require Senior Reservoir Engineer approval.",
-    "document_sources": ["HSE-007_MOC_Management_of_Change.md"]
+    "id": "VGT-012",
+    "category": "production_metrics",
+    "question": "What producing-day date range covers well 15/9-F-11 in ingested VOLVE excerpts?",
+    "expected_topics": [
+      "2013-07-24",
+      "2016-09-17"
+    ],
+    "ground_truth": "15/9-F-11 has producing-day excerpts from 2013-07-24 through 2016-09-17.",
+    "document_sources": [
+      "Volve_RealDaily_15-9-F-11.md",
+      "VOLVE_Field_Overview_RealDailyProduction.md"
+    ]
   },
   {
-    "id": "GT-013",
-    "category": "slugging",
-    "question": "How was the slugging problem in Oseberg OS-3H's flowline resolved?",
-    "expected_topics": ["riser-base gas injection", "slug", "flowline", "ROI", "velocity"],
-    "ground_truth": "The terrain-induced slugging in the 12 km flowline connecting OS-3H to the platform was caused by liquid accumulation in an inclined section at low flow velocities. The recommended solution was riser-base gas injection (0.4 MMscf/day at riser base) with ROI under 4 months, preferred over slug catcher upgrade which was undersized.",
-    "document_sources": ["WR-012_Oseberg_OS3H_IntermittentProduction.md"]
+    "id": "VGT-013",
+    "category": "production_metrics",
+    "question": "What average water-cut percentage appears across producing rows summarised for 15/9-F-11?",
+    "expected_topics": [
+      "water cut"
+    ],
+    "ground_truth": "Average producing-day water cut for 15/9-F-11 is about 38.3% over 1121 summarised producing rows.",
+    "document_sources": [
+      "Volve_RealDaily_15-9-F-11.md"
+    ]
   },
   {
-    "id": "GT-014",
-    "category": "injection_performance",
-    "question": "What caused premature water breakthrough in Volve 15/9-F-4 and what was done about the injector?",
-    "expected_topics": ["fracture", "injectivity", "F-11H", "gel treatment", "conformance"],
-    "ground_truth": "Premature breakthrough in F-4 was caused by preferential water movement through a fracture network not captured in the static model, connecting to injector 15/9-F-11H. F-11H was placed on monitoring-only for 30 days, and a conformance chemical treatment study was initiated.",
-    "document_sources": ["WR-002_Volve_F4_WaterBreakthrough_2024.md", "WR-010_Volve_F11H_InjectorPerformance.md"]
+    "id": "VGT-014",
+    "category": "production_metrics",
+    "question": "What maximum water-cut percentage is summarised for producer 15/9-F-11 and on what date did it occur?",
+    "expected_topics": [
+      "water cut"
+    ],
+    "ground_truth": "Highest summarised water cut for 15/9-F-11 is roughly 91.0% on 2016-04-20, with oil rate about 948.1 BOPD.",
+    "document_sources": [
+      "Volve_RealDaily_15-9-F-11.md"
+    ]
   },
   {
-    "id": "GT-015",
-    "category": "esp_operation",
-    "question": "What is the minimum motor insulation resistance acceptable for an ESP before startup?",
-    "expected_topics": ["megger", "100 MΩ", "insulation", "5 MΩ", "moisture"],
-    "ground_truth": "ESP motor insulation resistance must be greater than 100 MΩ (megger test) before startup. A reading below 5 MΩ indicates cable or motor winding moisture ingress and the motor must be pulled and replaced — do not attempt restart.",
-    "document_sources": ["EQ-002_ESP_Operation_Manual.md"]
+    "id": "VGT-015",
+    "category": "production_metrics",
+    "question": "What mean gas-oil ratio (scf/bbl) summarises producer 15/9-F-11 in the VOLVE workbook-derived text?",
+    "expected_topics": [
+      "GOR",
+      "scf/bbl"
+    ],
+    "ground_truth": "Mean GOR across producing rows for 15/9-F-11 is roughly 865 scf/bbl.",
+    "document_sources": [
+      "Volve_RealDaily_15-9-F-11.md"
+    ]
   },
   {
-    "id": "GT-016",
-    "category": "scale_prevention",
-    "question": "What scale inhibitor concentration is recommended for ESP wells with water cut above 50%?",
-    "expected_topics": ["30 ppm", "scale inhibitor", "squeeze", "quarterly", "50%"],
-    "ground_truth": "For ESP wells with water cut above 50%, minimum scale inhibitor concentration of 30 ppm is recommended, with quarterly inhibitor squeeze treatments. This is above the standard 20 ppm minimum for lower water cut wells.",
-    "document_sources": ["EQ-002_ESP_Operation_Manual.md", "ML-006_AllFields_ChemicalInjection_Review.md"]
+    "id": "VGT-016",
+    "category": "production_metrics",
+    "question": "What approximate mean bottom-hole pressure (psi) summary exists for producer 15/9-F-11?",
+    "expected_topics": [
+      "BHP"
+    ],
+    "ground_truth": "Mean reporting BHP among producing rows summarised for 15/9-F-11 is about 3416 psi.",
+    "document_sources": [
+      "Volve_RealDaily_15-9-F-11.md"
+    ]
   },
   {
-    "id": "GT-017",
-    "category": "corrosion",
-    "question": "What corrosion problem was identified in the Draugen produced water header in Q1 2024?",
-    "expected_topics": ["corrosion rate", "4.8 mpy", "3.0 mpy", "threshold", "inhibitor"],
-    "ground_truth": "The Draugen produced water header showed a corrosion rate of 4.8 mpy, exceeding the 3.0 mpy threshold. Actions required: increase corrosion inhibitor to 25 ppm, conduct UT thickness survey within 30 days, and evaluate piping replacement if UT shows >15% wall loss.",
-    "document_sources": ["ML-009_Draugen_CorrosionMonitoring.md"]
+    "id": "VGT-017",
+    "category": "production_metrics",
+    "question": "What peak daily oil rate (BOPD) appears for VOLVE producer 15/9-F-12 in the workbook-backed summary?",
+    "expected_topics": [
+      "BOPD",
+      "peak",
+      "oil"
+    ],
+    "ground_truth": "Peak oil for 15/9-F-12 is 37121.5 BOPD on 2009-01-08, water cut roughly 0.3 %.",
+    "document_sources": [
+      "Volve_RealDaily_15-9-F-12.md",
+      "VOLVE_Field_Overview_RealDailyProduction.md"
+    ]
   },
   {
-    "id": "GT-018",
-    "category": "well_integrity",
-    "question": "What well integrity issue was identified on Volve 15/9-F-12H and what was the risk level?",
-    "expected_topics": ["sustained casing pressure", "B-annulus", "45 psi", "category 2", "HSE LOW"],
-    "ground_truth": "15/9-F-12H had sustained casing pressure on B-annulus of 45 psi, below the 100 psi alert threshold. Root cause was micro-annular flow from the 2011 P&A cement job. Risk was assessed as LOW (HSE Category 2 - Acceptable), requiring only quarterly monitoring.",
-    "document_sources": ["WR-014_Volve_F12H_WellIntegrity.md"]
+    "id": "VGT-018",
+    "category": "production_metrics",
+    "question": "What producing-day date range covers well 15/9-F-12 in ingested VOLVE excerpts?",
+    "expected_topics": [
+      "2008-02-12",
+      "2016-08-12"
+    ],
+    "ground_truth": "15/9-F-12 has producing-day excerpts from 2008-02-12 through 2016-08-12.",
+    "document_sources": [
+      "Volve_RealDaily_15-9-F-12.md",
+      "VOLVE_Field_Overview_RealDailyProduction.md"
+    ]
   },
   {
-    "id": "GT-019",
-    "category": "separator_operation",
-    "question": "What action should be taken when a separator level controller failure causes gas carryover to the oil metering train?",
-    "expected_topics": ["level controller", "check LIC", "metering artefact", "GOR", "oil rate"],
-    "ground_truth": "Per the separator operations manual: check and verify level controller function, check oil meter readings against wellhead data, compare separator GOR with wellhead GOR. If the GOR spike is a metering artefact (normal wellhead GOR but elevated separator GOR), correct the measurement and log the event. If GOR spike is confirmed downhole, treat as real anomaly per HSE-OPS-001.",
-    "document_sources": ["EQ-001_Three_Phase_Separator_Operations.md"]
+    "id": "VGT-019",
+    "category": "production_metrics",
+    "question": "What average water-cut percentage appears across producing rows summarised for 15/9-F-12?",
+    "expected_topics": [
+      "water cut"
+    ],
+    "ground_truth": "Average producing-day water cut for 15/9-F-12 is about 59.6% over 2831 summarised producing rows.",
+    "document_sources": [
+      "Volve_RealDaily_15-9-F-12.md"
+    ]
   },
   {
-    "id": "GT-020",
-    "category": "choke_erosion",
-    "question": "What is the maximum allowable pressure differential across a single choke stage per NORSOK?",
-    "expected_topics": ["1500 psi", "NORSOK D-010", "erosion", "pressure differential"],
-    "ground_truth": "Per NORSOK D-010, the maximum allowable pressure differential across a single choke stage is 1500 psi. Exceeding this threshold increases erosion risk, especially with sand production.",
-    "document_sources": ["EQ-003_Christmas_Tree_Manual.md"]
+    "id": "VGT-020",
+    "category": "production_metrics",
+    "question": "What maximum water-cut percentage is summarised for producer 15/9-F-12 and on what date did it occur?",
+    "expected_topics": [
+      "water cut"
+    ],
+    "ground_truth": "Highest summarised water cut for 15/9-F-12 is roughly 97.5% on 2014-08-25, with oil rate about 683.4 BOPD.",
+    "document_sources": [
+      "Volve_RealDaily_15-9-F-12.md"
+    ]
   },
   {
-    "id": "GT-021",
-    "category": "production_optimisation",
-    "question": "What production optimisation was recommended for the Draugen field in March 2024?",
-    "expected_topics": ["D-5H", "D-1H", "water cut", "choke", "uplift"],
-    "ground_truth": "The March 2024 optimisation recommended: reducing D-5H choke (56% water cut, high water handling load), increasing D-1H choke to 56/64\" (low water cut, high productivity). Expected net impact: +120 BOPD with 8% reduction in water handling.",
-    "document_sources": ["WR-009_MultiWell_ProductionOptimisation_2024.md"]
+    "id": "VGT-021",
+    "category": "production_metrics",
+    "question": "What mean gas-oil ratio (scf/bbl) summarises producer 15/9-F-12 in the VOLVE workbook-derived text?",
+    "expected_topics": [
+      "GOR",
+      "scf/bbl"
+    ],
+    "ground_truth": "Mean GOR across producing rows for 15/9-F-12 is roughly 852 scf/bbl.",
+    "document_sources": [
+      "Volve_RealDaily_15-9-F-12.md"
+    ]
   },
   {
-    "id": "GT-022",
-    "category": "gas_lift",
-    "question": "What is the definition of lift efficiency in gas-lifted wells and what is the target threshold?",
-    "expected_topics": ["lift efficiency", "0.80", "incremental", "injected gas", "nodal analysis"],
-    "ground_truth": "Lift efficiency is the incremental oil production per unit of injected gas, maximised at the optimal injection rate. The target threshold is >0.80 for acceptable lift performance. Below 0.70, intervention is needed. Optimal rate is determined by nodal analysis for each well.",
-    "document_sources": ["EQ-004_Gas_Lift_System_Manual.md"]
+    "id": "VGT-022",
+    "category": "production_metrics",
+    "question": "What approximate mean bottom-hole pressure (psi) summary exists for producer 15/9-F-12?",
+    "expected_topics": [
+      "BHP"
+    ],
+    "ground_truth": "Mean reporting BHP among producing rows summarised for 15/9-F-12 is about 3725 psi.",
+    "document_sources": [
+      "Volve_RealDaily_15-9-F-12.md"
+    ]
   },
   {
-    "id": "GT-023",
-    "category": "flowline_integrity",
-    "question": "What was found during the Oseberg OS-3H flowline inspection in February 2024?",
-    "expected_topics": ["MFL", "22% wall loss", "km 7.8", "cathodic protection", "free-span"],
-    "ground_truth": "The MFL pigging inspection found three metal loss indications: km 4.2 (18% wall loss - monitor), km 7.8 (22% wall loss - monitor, re-inspect in 12 months), km 11.1 (8% - acceptable). No free-spans exceeding 4m. Anode depletion at 68% in Section 4. No immediate integrity concerns.",
-    "document_sources": ["ML-005_Oseberg_FlowlineInspection.md"]
+    "id": "VGT-023",
+    "category": "production_metrics",
+    "question": "What peak daily oil rate (BOPD) appears for VOLVE producer 15/9-F-14 in the workbook-backed summary?",
+    "expected_topics": [
+      "BOPD",
+      "peak",
+      "oil"
+    ],
+    "ground_truth": "Peak oil for 15/9-F-14 is 35502.0 BOPD on 2009-09-20, water cut roughly 12.2 %.",
+    "document_sources": [
+      "Volve_RealDaily_15-9-F-14.md",
+      "VOLVE_Field_Overview_RealDailyProduction.md"
+    ]
   },
   {
-    "id": "GT-024",
-    "category": "norm",
-    "question": "In what equipment does NORM preferentially accumulate and what does increasing NORM indicate?",
-    "expected_topics": ["choke", "separator", "ESP", "water production", "scale"],
-    "ground_truth": "NORM accumulates preferentially in production choke bodies, wellhead outlets, separator water outlets, and ESP pump housings. Increasing NORM readings may indicate increasing water production or scale precipitation conditions. When water cut increases >10%/week, NORM monitoring frequency should be increased.",
-    "document_sources": ["HSE-004_NORM_Management.md"]
+    "id": "VGT-024",
+    "category": "production_metrics",
+    "question": "What producing-day date range covers well 15/9-F-14 in ingested VOLVE excerpts?",
+    "expected_topics": [
+      "2008-07-13",
+      "2016-07-13"
+    ],
+    "ground_truth": "15/9-F-14 has producing-day excerpts from 2008-07-13 through 2016-07-13.",
+    "document_sources": [
+      "Volve_RealDaily_15-9-F-14.md",
+      "VOLVE_Field_Overview_RealDailyProduction.md"
+    ]
   },
   {
-    "id": "GT-025",
-    "category": "scada",
-    "question": "What does a constantly flatlined SCADA tag value indicate?",
-    "expected_topics": ["instrument failure", "RTU freeze", "data quality", "bad quality flag"],
-    "ground_truth": "A flatlined SCADA tag value indicates instrument failure or RTU freeze. Data with bad quality flags (flag ≠ 0) should not be used for anomaly detection without engineer review. Bad quality data should be checked before any operational decisions.",
-    "document_sources": ["EQ-005_SCADA_System_Manual.md"]
+    "id": "VGT-025",
+    "category": "production_metrics",
+    "question": "What average water-cut percentage appears across producing rows summarised for 15/9-F-14?",
+    "expected_topics": [
+      "water cut"
+    ],
+    "ground_truth": "Average producing-day water cut for 15/9-F-14 is about 65.1% over 2720 summarised producing rows.",
+    "document_sources": [
+      "Volve_RealDaily_15-9-F-14.md"
+    ]
   },
   {
-    "id": "GT-026",
-    "category": "pressure_management",
-    "question": "If wellhead pressure is high and BHP is also high on a well, what does this indicate?",
-    "expected_topics": ["reservoir pressure surge", "BHP", "WHP", "both high"],
-    "ground_truth": "When both wellhead pressure and BHP are simultaneously high, it indicates a possible reservoir pressure surge rather than a surface restriction. This differs from choke restriction (WHP high, oil rate declining) or separator pressure (all wells high simultaneously).",
-    "document_sources": ["EQ-006_Wellhead_Pressure_Systems.md"]
+    "id": "VGT-026",
+    "category": "production_metrics",
+    "question": "What maximum water-cut percentage is summarised for producer 15/9-F-14 and on what date did it occur?",
+    "expected_topics": [
+      "water cut"
+    ],
+    "ground_truth": "Highest summarised water cut for 15/9-F-14 is roughly 97.3% on 2016-05-10, with oil rate about 677.2 BOPD.",
+    "document_sources": [
+      "Volve_RealDaily_15-9-F-14.md"
+    ]
   },
   {
-    "id": "GT-027",
-    "category": "metering",
-    "question": "What is the maximum calibration interval for fiscal oil export meters per Norwegian regulations?",
-    "expected_topics": ["3 months", "NPD", "±0.30%", "fiscal metering", "calibration"],
-    "ground_truth": "Per Norwegian Petroleum Directorate Metering Regulations, fiscal oil export meters must be calibrated at a maximum interval of 3 months, with an expanded uncertainty requirement of ±0.30% and annual third-party verification.",
-    "document_sources": ["EQ-007_Production_Metering.md"]
+    "id": "VGT-027",
+    "category": "production_metrics",
+    "question": "What mean gas-oil ratio (scf/bbl) summarises producer 15/9-F-14 in the VOLVE workbook-derived text?",
+    "expected_topics": [
+      "GOR",
+      "scf/bbl"
+    ],
+    "ground_truth": "Mean GOR across producing rows for 15/9-F-14 is roughly 846 scf/bbl.",
+    "document_sources": [
+      "Volve_RealDaily_15-9-F-14.md"
+    ]
   },
   {
-    "id": "GT-028",
-    "category": "wax",
-    "question": "What is the Wax Appearance Temperature for typical North Sea crudes and how is wax buildup monitored?",
-    "expected_topics": ["80-110°F", "WAT", "differential pressure", "pigging", "10°F margin"],
-    "ground_truth": "Wax Appearance Temperature (WAT) for typical North Sea crudes is 80-110°F. Flowlines should be maintained above WAT + 10°F margin. Wax buildup is monitored via differential pressure across the flowline — if increasing >10 psi/week, pigging should be scheduled.",
-    "document_sources": ["EQ-008_Subsea_Flowline_Operations.md"]
+    "id": "VGT-028",
+    "category": "production_metrics",
+    "question": "What approximate mean bottom-hole pressure (psi) summary exists for producer 15/9-F-14?",
+    "expected_topics": [
+      "BHP"
+    ],
+    "ground_truth": "Mean reporting BHP among producing rows summarised for 15/9-F-14 is about 3595 psi.",
+    "document_sources": [
+      "Volve_RealDaily_15-9-F-14.md"
+    ]
   },
   {
-    "id": "GT-029",
-    "category": "gas_lift_restoration",
-    "question": "What production improvement was achieved after the gas lift valve replacement on Gullfaks GF-A-2H?",
-    "expected_topics": ["1340 BOPD", "890 BOPD", "liquid loading", "1.4 MMscf", "lift efficiency"],
-    "ground_truth": "After the gas lift valve replacement and increased injection rate to 1.4 MMscf/day, oil production on GF-A-2H recovered from 890 BOPD (liquid loading) to 1,340 BOPD. Wellhead pressure reduced from 310 to 195 psi. Post-optimisation lift efficiency was 0.89.",
-    "document_sources": ["ML-010_Gullfaks_GasliftValve_Replacement.md"]
+    "id": "VGT-029",
+    "category": "production_metrics",
+    "question": "What peak daily oil rate (BOPD) appears for VOLVE producer 15/9-F-15 D in the workbook-backed summary?",
+    "expected_topics": [
+      "BOPD",
+      "peak",
+      "oil"
+    ],
+    "ground_truth": "Peak oil for 15/9-F-15 D is 3227.4 BOPD on 2014-01-18, water cut roughly 0.0 %.",
+    "document_sources": [
+      "Volve_RealDaily_15-9-F-15_D.md",
+      "VOLVE_Field_Overview_RealDailyProduction.md"
+    ]
   },
   {
-    "id": "GT-030",
-    "category": "reservoir",
-    "question": "What is happening to Oseberg OS-1H's GOR and what is the recommended action threshold?",
-    "expected_topics": ["520", "680", "bubble point", "3100 psi", "750 scf/bbl", "gas reinjection"],
-    "ground_truth": "OS-1H's GOR increased from 520 to 680 scf/bbl in 2023, indicating progressive reservoir pressure depletion approaching the bubble point (3100 psi). If GOR exceeds 750 scf/bbl, a gas reinjection study should be initiated.",
-    "document_sources": ["WR-004_Oseberg_OS1H_Annual_2023.md"]
+    "id": "VGT-030",
+    "category": "production_metrics",
+    "question": "What producing-day date range covers well 15/9-F-15 D in ingested VOLVE excerpts?",
+    "expected_topics": [
+      "2014-01-16",
+      "2016-07-06"
+    ],
+    "ground_truth": "15/9-F-15 D has producing-day excerpts from 2014-01-16 through 2016-07-06.",
+    "document_sources": [
+      "Volve_RealDaily_15-9-F-15_D.md",
+      "VOLVE_Field_Overview_RealDailyProduction.md"
+    ]
   },
   {
-    "id": "GT-031",
-    "category": "pump_failure",
-    "question": "What are the primary causes of ESP motor overtemperature in order of likelihood?",
-    "expected_topics": ["scale", "underload", "formation damage", "winding fault", "megger"],
-    "ground_truth": "In order of likelihood: (1) scale on pump stages causing increased motor load, (2) underloaded pump with insufficient fluid above motor reducing cooling, (3) formation damage causing cooling restriction, (4) motor winding fault (partial short circuit). Diagnosis uses motor current vs design curve and megger test.",
-    "document_sources": ["EQ-002_ESP_Operation_Manual.md"]
+    "id": "VGT-031",
+    "category": "production_metrics",
+    "question": "What average water-cut percentage appears across producing rows summarised for 15/9-F-15 D?",
+    "expected_topics": [
+      "water cut"
+    ],
+    "ground_truth": "Average producing-day water cut for 15/9-F-15 D is about 19.3% over 766 summarised producing rows.",
+    "document_sources": [
+      "Volve_RealDaily_15-9-F-15_D.md"
+    ]
   },
   {
-    "id": "GT-032",
-    "category": "water_breakthrough",
-    "question": "What are the early warning indicators of water breakthrough in a production well?",
-    "expected_topics": ["water cut", "5%/week", "brine salinity", "tracer", "pressure interference"],
-    "ground_truth": "Early warning indicators of water breakthrough: water cut increase >5%/week, change in brine salinity (indicating change in source formation), tracer arrival from injector, and pressure interference test anomaly.",
-    "document_sources": ["WR-015_NorthSea_WaterCut_BestPractices.md"]
+    "id": "VGT-032",
+    "category": "production_metrics",
+    "question": "What maximum water-cut percentage is summarised for producer 15/9-F-15 D and on what date did it occur?",
+    "expected_topics": [
+      "water cut"
+    ],
+    "ground_truth": "Highest summarised water cut for 15/9-F-15 D is roughly 68.6% on 2016-06-10, with oil rate about 525.7 BOPD.",
+    "document_sources": [
+      "Volve_RealDaily_15-9-F-15_D.md"
+    ]
   },
   {
-    "id": "GT-033",
-    "category": "separator_maintenance",
-    "question": "What was found during the Volve Train A separator overhaul in January 2024?",
-    "expected_topics": ["H2S", "solenoid", "sulphide stress cracking", "Inconel 625", "NACE MR0175"],
-    "ground_truth": "The January 2024 overhaul found sulphide stress cracking in the LIC-101 solenoid valve body due to H2S in produced water (45 ppm). The valve was replaced with H2S-resistant Inconel 625 material (NACE MR0175 compliant). Wax deposits on mist eliminator and calcium carbonate scale on weir plates were also addressed.",
-    "document_sources": ["ML-002_Volve_Separator_Overhaul.md"]
+    "id": "VGT-033",
+    "category": "production_metrics",
+    "question": "What mean gas-oil ratio (scf/bbl) summarises producer 15/9-F-15 D in the VOLVE workbook-derived text?",
+    "expected_topics": [
+      "GOR",
+      "scf/bbl"
+    ],
+    "ground_truth": "Mean GOR across producing rows for 15/9-F-15 D is roughly 855 scf/bbl.",
+    "document_sources": [
+      "Volve_RealDaily_15-9-F-15_D.md"
+    ]
   },
   {
-    "id": "GT-034",
-    "category": "bhp_decline",
-    "question": "What does BHP declining faster than the material balance model predict indicate for Gullfaks GF-B-1H?",
-    "expected_topics": ["fault block", "connectivity", "material balance", "pressure support", "injection"],
-    "ground_truth": "Faster-than-predicted BHP decline on GF-B-1H (340 psi over 90 days vs model prediction) indicates possible communication with a depleted fault block (2900 psi in 2022 vs current 3480 psi). This may require pressure support via water injection conversion and updated full-field model.",
-    "document_sources": ["WR-008_Gullfaks_GFB1H_PressureDecline.md"]
+    "id": "VGT-034",
+    "category": "production_metrics",
+    "question": "What approximate mean bottom-hole pressure (psi) summary exists for producer 15/9-F-15 D?",
+    "expected_topics": [
+      "BHP"
+    ],
+    "ground_truth": "Mean reporting BHP among producing rows summarised for 15/9-F-15 D is about 2991 psi.",
+    "document_sources": [
+      "Volve_RealDaily_15-9-F-15_D.md"
+    ]
   },
   {
-    "id": "GT-035",
-    "category": "confined_space",
-    "question": "What gas concentrations must be confirmed before entry into a production vessel?",
-    "expected_topics": ["O2 19.5-23.5%", "LEL <1%", "H2S <1 ppm", "CO <25 ppm", "continuous monitoring"],
-    "ground_truth": "Before confined space entry in production vessels: O2 must be 19.5-23.5%, LEL below 1%, H2S below 1 ppm, CO below 25 ppm. Continuous gas monitoring is required during entry. For vessels following a production anomaly, assume H2S present until proven otherwise.",
-    "document_sources": ["HSE-006_Confined_Space_Entry.md"]
+    "id": "VGT-035",
+    "category": "production_metrics",
+    "question": "What peak daily oil rate (BOPD) appears for VOLVE producer 15/9-F-5 in the workbook-backed summary?",
+    "expected_topics": [
+      "BOPD",
+      "peak",
+      "oil"
+    ],
+    "ground_truth": "Peak oil for 15/9-F-5 is 2495.8 BOPD on 2016-04-21, water cut roughly 45.7 %.",
+    "document_sources": [
+      "Volve_RealDaily_15-9-F-5.md",
+      "VOLVE_Field_Overview_RealDailyProduction.md"
+    ]
   },
   {
-    "id": "GT-036",
-    "category": "scssv",
-    "question": "How frequently must subsurface safety valves be tested per Norwegian PSA regulations?",
-    "expected_topics": ["6 months", "Facilities Regulations", "§48", "function test", "8500 psi"],
-    "ground_truth": "Per Norwegian PSA Facilities Regulations §48, all SSCVs must be tested at minimum every 6 months, using a function test at 8500 psi (or MAWP if lower), with OIM sign-off required on the test record.",
-    "document_sources": ["EQ-003_Christmas_Tree_Manual.md"]
+    "id": "VGT-036",
+    "category": "production_metrics",
+    "question": "What producing-day date range covers well 15/9-F-5 in ingested VOLVE excerpts?",
+    "expected_topics": [
+      "2016-04-20",
+      "2016-08-26"
+    ],
+    "ground_truth": "15/9-F-5 has producing-day excerpts from 2016-04-20 through 2016-08-26.",
+    "document_sources": [
+      "Volve_RealDaily_15-9-F-5.md",
+      "VOLVE_Field_Overview_RealDailyProduction.md"
+    ]
   },
   {
-    "id": "GT-037",
-    "category": "chemical_injection",
-    "question": "What wax inhibitor increase was recommended for Volve wells based on the separator inspection findings?",
-    "expected_topics": ["wax inhibitor", "50 to 80 ppm", "wellheads", "pour point", "winter"],
-    "ground_truth": "Based on heavy wax deposits found during the Volve separator overhaul, wax inhibitor injection at Volve wellheads should be increased from 50 to 80 ppm. A pour point depressant additive should be considered for winter operations.",
-    "document_sources": ["ML-006_AllFields_ChemicalInjection_Review.md"]
+    "id": "VGT-037",
+    "category": "production_metrics",
+    "question": "What average water-cut percentage appears across producing rows summarised for 15/9-F-5?",
+    "expected_topics": [
+      "water cut"
+    ],
+    "ground_truth": "Average producing-day water cut for 15/9-F-5 is about 24.3% over 129 summarised producing rows.",
+    "document_sources": [
+      "Volve_RealDaily_15-9-F-5.md"
+    ]
   },
   {
-    "id": "GT-038",
-    "category": "well_kick",
-    "question": "What are the early kick indicators for a production well?",
-    "expected_topics": ["WHP increase", "constant choke", "tubing pressure", "flow check", "BHP decrease"],
-    "ground_truth": "Early kick indicators for production wells: flowing wellhead pressure increase with constant choke setting, tubing pressure increase without corresponding surface flow rate change, unexplained BHP decrease (reservoir influx), and flow-check positive when expected static.",
-    "document_sources": ["HSE-003_Well_Control_Procedures.md"]
+    "id": "VGT-038",
+    "category": "production_metrics",
+    "question": "What maximum water-cut percentage is summarised for producer 15/9-F-5 and on what date did it occur?",
+    "expected_topics": [
+      "water cut"
+    ],
+    "ground_truth": "Highest summarised water cut for 15/9-F-5 is roughly 80.0% on 2016-04-20, with oil rate about 111.6 BOPD.",
+    "document_sources": [
+      "Volve_RealDaily_15-9-F-5.md"
+    ]
   },
   {
-    "id": "GT-039",
-    "category": "hydrates",
-    "question": "At what conditions do hydrates form in subsea flowlines and how are they prevented?",
-    "expected_topics": ["100 psi", "50°F", "MEG", "50 wt%", "monoethylene glycol"],
-    "ground_truth": "Hydrates form when pressure exceeds ~100 psi and temperature drops below ~50°F (varies with gas composition). Prevention uses continuous MEG (monoethylene glycol) injection at subsea wellheads, maintaining MEG concentration above 50 wt% in aqueous phase.",
-    "document_sources": ["EQ-008_Subsea_Flowline_Operations.md"]
-  },
-  {
-    "id": "GT-040",
-    "category": "subsea_control",
-    "question": "What caused communication dropouts on the Volve subsea manifold in early 2024?",
-    "expected_topics": ["SEM-B", "firmware", "incompatibility", "MCS upgrade", "4.2.1"],
-    "ground_truth": "Communication dropouts on the Volve subsea manifold SEM-B were caused by a firmware version incompatibility introduced by an MCS upgrade in December 2023. The SEM-B was replaced via ROV in February 2024 with firmware 4.2.1. No dropouts occurred after replacement.",
-    "document_sources": ["ML-008_Volve_SubseaControl_Maintenance.md"]
-  },
-  {
-    "id": "GT-041",
-    "category": "npd_real_data",
-    "data_source": "Sodir FactPages NPDID 43506, NLOD 2.0 open data",
-    "question": "What was the total oil production from the Volve field over its entire production life, and when did it peak?",
-    "expected_topics": ["63 million barrels", "2008", "2016", "56000 BOPD", "peak 2010", "Equinor"],
-    "ground_truth": "The Volve field (Block 15/9, Sleipner area) produced approximately 63 million barrels of oil in total from 2008 to 2016. Peak production was approximately 56,200 BOPD in 2010. The field was operated by Equinor and produced from the Hugin Formation at around 2,600m depth with API gravity of 35.4 degrees.",
-    "document_sources": ["NPD_Sodir_FactPages_Volve_NPDID43506.md"],
-    "real_data_url": "https://factpages.sodir.no/en/field/pageview/all/43506"
-  },
-  {
-    "id": "GT-042",
-    "category": "npd_real_data",
-    "data_source": "Sodir FactPages NPDID 43566, NLOD 2.0 open data",
-    "question": "What is the production history of the Draugen field in the Norwegian Sea and who are its operators?",
-    "expected_topics": ["354 million barrels", "1993", "Haltenbanken", "Okea", "Shell", "6407/9", "200000 BOPD peak"],
-    "ground_truth": "The Draugen field (Block 6407/9, Haltenbanken area, Norwegian Sea) has produced approximately 354 million barrels of oil since first oil in 1993. Peak production was approximately 200,000 BOPD in 1995. The field was originally operated by Shell, then A.P. Møller, and is now operated by Okea. The reservoir is the Åre Formation at approximately 1,700m depth with API gravity of 41.4 degrees.",
-    "document_sources": ["NPD_Sodir_FactPages_Draugen_NPDID43566.md"],
-    "real_data_url": "https://factpages.sodir.no/en/field/pageview/all/43566"
-  },
-  {
-    "id": "GT-043",
-    "category": "npd_real_data",
-    "data_source": "Sodir FactPages NPDID 43718, NLOD 2.0 open data",
-    "question": "What is the current late-field water cut on Gullfaks and what production optimisation challenges does this create?",
-    "expected_topics": ["90%", "water cut", "Gullfaks", "2.7 billion barrels", "Equinor", "three platforms", "water handling"],
-    "ground_truth": "Gullfaks (Block 34/10, Northern North Sea), operated by Equinor, has produced approximately 2.7 billion barrels total since 1986 across three platforms (A, B, C). The late-field water cut is approximately 90%, meaning that for every barrel of oil produced, 9 barrels of water must be handled. This creates significant water handling capacity constraints and increases OPEX per barrel, making production optimisation critical for economic viability.",
-    "document_sources": ["NPD_Sodir_FactPages_Gullfaks_NPDID43718.md"],
-    "real_data_url": "https://factpages.sodir.no/en/field/pageview/all/43718"
-  },
-  {
-    "id": "GT-044",
-    "category": "npd_real_data",
-    "data_source": "Sodir FactPages NPDID 43756, NLOD 2.0 open data",
-    "question": "How does Oseberg's production profile compare to Volve, and what does this imply for anomaly detection thresholds?",
-    "expected_topics": ["1.9 billion barrels", "Oseberg", "63 million barrels", "Volve", "different scale", "baseline", "threshold calibration"],
-    "ground_truth": "Oseberg (Block 30/6) has produced approximately 1.9 billion barrels since 1988, compared to Volve's ~63 million barrels — a 30x difference in scale. Oseberg peak was 570,000 BOPD vs Volve's 56,200 BOPD. This means anomaly detection thresholds must be field-specific: a 5% oil rate decline on Oseberg represents ~5,000 BOPD lost vs ~2,800 BOPD on Volve. Z-score baselines and Isolation Forest models must be trained per field to avoid false positives or missed anomalies caused by scale differences.",
-    "document_sources": ["NPD_Sodir_FactPages_Oseberg_NPDID43756.md"],
-    "real_data_url": "https://factpages.sodir.no/en/field/pageview/all/43756"
-  },
-  {
-    "id": "GT-045",
-    "category": "npd_real_data",
-    "data_source": "Sodir NLOD 2.0 open data + Equinor Volve Open Dataset",
-    "question": "What are the well names in the Volve field and which are producers vs injectors?",
-    "expected_topics": ["15/9-F-1C", "15/9-F-4", "15/9-F-5", "15/9-F-11H", "15/9-F-12H", "injector", "producer"],
-    "ground_truth": "The Volve field production wells include 15/9-F-1C, 15/9-F-4, and 15/9-F-5 as producers, while 15/9-F-11H and 15/9-F-12H are water injectors. These are the core wells from the Equinor Volve Open Dataset (released 2019), which contains real production data, LAS well logs, seismic, and Eclipse reservoir simulation files. The dataset is publicly available under the Equinor Open Data license and is used as the primary authentic data source for this system's anomaly detection baselines.",
-    "document_sources": ["Equinor_Volve_OpenDataset_WellList.md"],
-    "real_data_url": "https://www.equinor.com/energy/volve-data-sharing"
-  },
-  {
-    "id": "GT-046",
-    "category": "calibration",
-    "question": "What is Expected Calibration Error (ECE) and why is it important for an AI agent making production recommendations?",
-    "expected_topics": ["ECE", "confidence", "accuracy", "calibration", "offshore", "safety", "overconfident"],
-    "ground_truth": "Expected Calibration Error (ECE) measures whether an AI agent's stated confidence matches its actual accuracy. ECE = Σ (|Bin| / N) × |accuracy(bin) - confidence(bin)|. A perfectly calibrated agent has ECE = 0.0. In offshore production operations, an overconfident agent (high confidence, wrong answer) is dangerous — it may suppress human escalation for cases that require engineer review. For the NorthSea AgentOps agent, ECE is measured on the Critic's confidence scores against ground-truth outcomes. Escalation recall is weighted more heavily than precision because a missed escalation (false negative) carries higher risk than an unnecessary one.",
-    "document_sources": ["AGENT_EVAL_METHODOLOGY.md"]
-  },
-  {
-    "id": "GT-047",
-    "category": "multi_agent",
-    "question": "What is the role of the Challenger agent in the NorthSea AgentOps investigation pipeline?",
-    "expected_topics": ["Challenger", "adversarial", "alternative hypotheses", "Critic", "Reconciler", "multi-agent", "HIGH risk"],
-    "ground_truth": "The Challenger agent is an adversarial second reviewer that activates when the primary Critic's confidence is below 0.80, or when risk level is HIGH or CRITICAL. It independently reviews the same evidence and tries to identify alternative root cause hypotheses the Critic missed. A Reconciler agent then synthesises both positions: if the Challenger disagrees, confidence is reduced conservatively. This implements the 'critic-actor with adversarial validation' multi-agent coordination pattern — analogous to the independent verification requirement in NORSOK-style safety-critical operations. The Challenger is skipped for LOW risk, high-confidence cases to avoid unnecessary LLM cost.",
-    "document_sources": ["AGENT_ARCHITECTURE.md"]
-  },
-  {
-    "id": "GT-048",
-    "category": "react_pattern",
-    "question": "When should the ReAct pattern be used instead of the Plan-Execute-Critic pipeline for an offshore operational query?",
-    "expected_topics": ["ReAct", "single-turn", "Plan-Execute", "simple", "operational Q&A", "latency", "diagnostic"],
-    "ground_truth": "The ReAct (Reasoning + Acting) pattern (Yao et al., 2022) should be used for single-turn operational queries that do not require upfront multi-step planning — e.g. 'What is the current BHP on F-4?', 'Retrieve the HSE procedure for H2S level A3', or 'Check maintenance logs for D-3H'. The Plan-Execute-Critic pipeline is reserved for complex anomaly investigations where multiple evidence sources must be systematically gathered, cross-validated by a Critic, and challenged adversarially. Using Plan-Execute-Critic for simple queries wastes tokens and adds latency; using ReAct for complex investigations risks missing evidence. Both patterns share the same tool allowlist and injection guards.",
-    "document_sources": ["AGENT_ARCHITECTURE.md"]
+    "id": "VGT-039",
+    "category": "production_metrics",
+    "question": "What mean gas-oil ratio (scf/bbl) summarises producer 15/9-F-5 in the VOLVE workbook-derived text?",
+    "expected_topics": [
+      "GOR",
+      "scf/bbl"
+    ],
+    "ground_truth": "Mean GOR across producing rows for 15/9-F-5 is roughly 896 scf/bbl.",
+    "document_sources": [
+      "Volve_RealDaily_15-9-F-5.md"
+    ]
   }
 ]

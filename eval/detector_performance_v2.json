@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-16T11:24:46.798750Z",
+  "generated_at": "2026-05-16T12:58:11.187094Z",
   "data_source": "Equinor Volve Open Dataset \u2014 daily production 2007-2016",
   "train_split": 0.7,
   "gap_days": 14,
@@ -16,9 +16,9 @@
   "v1_aggregate": {
     "day_precision": 0.1082,
     "day_recall": 0.95,
-    "day_f1": 0.1877,
-    "day_fpr": 0.5917,
-    "macro_roc_auc": 0.6808,
+    "day_f1": 0.1876,
+    "day_fpr": 0.5923,
+    "macro_roc_auc": 0.6798,
     "day_gradual_recall": 0.69,
     "operational_event_recall": 0.96,
     "operational_alert_precision": 0.142,
@@ -28,16 +28,16 @@
     "total_tp_bursts": 23,
     "total_fp_bursts": 139,
     "total_tp": 203,
-    "total_fp": 1275,
+    "total_fp": 1277,
     "total_fn": 27,
-    "total_tn": 788,
+    "total_tn": 786,
     "per_anomaly_type_recall": {
+      "water_breakthrough_gradual": 0.8,
+      "bhp_depletion_gradual": 0.6,
+      "gor_spike_step": 1.0,
       "oil_rate_collapse_step": 0.8,
       "bhp_depletion_step": 0.6,
-      "gor_spike_step": 1.0,
-      "water_breakthrough_gradual": 0.8,
-      "water_breakthrough_step": 1.0,
-      "bhp_depletion_gradual": 0.6
+      "water_breakthrough_step": 1.0
     },
     "total_revenue_at_risk_usd": 0.0,
     "n_wells": 5
@@ -61,12 +61,12 @@
     "total_fn": 208,
     "total_tn": 1856,
     "per_anomaly_type_recall": {
+      "water_breakthrough_gradual": 0.8,
+      "bhp_depletion_gradual": 0.6,
+      "gor_spike_step": 0.4,
       "oil_rate_collapse_step": 0.4,
       "bhp_depletion_step": 0.2,
-      "gor_spike_step": 0.4,
-      "water_breakthrough_gradual": 0.8,
-      "water_breakthrough_step": 0.6,
-      "bhp_depletion_gradual": 0.6
+      "water_breakthrough_step": 0.6
     },
     "total_revenue_at_risk_usd": 4568879.8,
     "n_wells": 5
@@ -95,7 +95,7 @@
       "recall": 1.0,
       "f1": 0.1905,
       "fpr": 0.6464,
-      "roc_auc": 0.6818,
+      "roc_auc": 0.6807,
       "gradual_recall": 0.925,
       "per_type_detected": {
         "water_breakthrough_step": true,
@@ -114,7 +114,7 @@
       "recall": 0.75,
       "f1": 0.0535,
       "fpr": 0.6778,
-      "roc_auc": 0.4827,
+      "roc_auc": 0.482,
       "gradual_recall": 0.675,
       "per_type_detected": {
         "water_breakthrough_step": true,
@@ -129,11 +129,11 @@
       "well_id": "15/9-F-14",
       "train_days": 1903,
       "test_days": 803,
-      "precision": 0.0464,
+      "precision": 0.0462,
       "recall": 1.0,
-      "f1": 0.0887,
-      "fpr": 0.5532,
-      "roc_auc": 0.7183,
+      "f1": 0.0883,
+      "fpr": 0.5559,
+      "roc_auc": 0.7149,
       "gradual_recall": 0.85,
       "per_type_detected": {
         "water_breakthrough_step": true,
@@ -248,7 +248,7 @@
       "recall": 0.1,
       "f1": 0.1026,
       "fpr": 0.0966,
-      "roc_auc": 0.5043,
+      "roc_auc": 0.5047,
       "gradual_recall": 0.1,
       "per_type_detected": {
         "water_breakthrough_step": false,

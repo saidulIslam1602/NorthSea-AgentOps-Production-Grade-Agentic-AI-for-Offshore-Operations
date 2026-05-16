@@ -26,6 +26,7 @@ DOC_TYPE_MAP: dict[str, str] = {
     "maintenance_logs": "Maintenance Log",
     "hse_procedures": "HSE Procedure",
     "equipment_manuals": "Equipment Manual",
+    "volve_real": "Volve Open Dataset (production)",
 }
 
 
@@ -181,7 +182,14 @@ async def ingest_file(
         field_name=field_name,
         metadata={"filename": file_path.name, "category": doc_type},
     )
-    await upsert_chunks(conn, document_id, chunks)
+    await upsert_chunks(
+        conn,
+        document_id,
+        chunks,
+        document_title=title,
+        well_id=well_id,
+        field_name=field_name,
+    )
     await conn.commit()
 
     logger.info("Ingested %s → %d chunks (doc_id: %s)", file_path.name, len(chunks), document_id)

@@ -4,6 +4,8 @@ stages:
     cmd: python3 scripts/train_detector_v2.py
     deps:
       - scripts/train_detector_v2.py
+      - scripts/__init__.py
+      - eval/train_detector_well_mp.py
       - src/anomaly/adaptive_detector.py
       - src/anomaly/detector.py
       - src/data/volve_loader.py
