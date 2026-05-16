@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
-import requests  # type: ignore[import-untyped]
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -170,7 +170,8 @@ def _download_csv(url: str, timeout: int = 60, retries: int = 3) -> pd.DataFrame
             response.raise_for_status()
             return pd.read_csv(StringIO(response.text), sep=";", encoding="utf-8", low_memory=False)
         except requests.exceptions.HTTPError as e:
-            logger.warning("HTTP error %s on attempt %d: %s", e.response.status_code, attempt, url)
+            rc = e.response.status_code if e.response is not None else "?"
+            logger.warning("HTTP error %s on attempt %d: %s", rc, attempt, url)
         except Exception as exc:
             logger.warning("Download failed attempt %d: %s", attempt, exc)
             if attempt < retries:

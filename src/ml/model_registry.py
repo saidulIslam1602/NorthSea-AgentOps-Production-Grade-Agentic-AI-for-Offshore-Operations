@@ -59,6 +59,7 @@ import mlflow.sklearn
 import pandas as pd
 from mlflow import MlflowClient
 from mlflow.models import ModelSignature
+from mlflow.pyfunc import PythonModel
 from mlflow.types.schema import ColSpec, Schema
 
 logger = logging.getLogger(__name__)
@@ -138,7 +139,7 @@ class ModelMetrics:
         )
 
 
-class WellDetectorPyfunc(mlflow.pyfunc.PythonModel):  # type: ignore[misc]
+class WellDetectorPyfunc(PythonModel):  # type: ignore[misc]
     """
     MLflow pyfunc wrapper for AdaptiveWellAnomalyDetector.
 
@@ -152,7 +153,7 @@ class WellDetectorPyfunc(mlflow.pyfunc.PythonModel):  # type: ignore[misc]
     Output: DataFrame with columns [anomaly_score, anomaly_type, severity, economic_impact_usd]
     """
 
-    def load_context(self, context: mlflow.pyfunc.PythonModelContext) -> None:
+    def load_context(self, context: Any) -> None:
         """Load detector state from MLflow artifact path."""
         detector_path = context.artifacts["detector_state"]
         thresholds_path = context.artifacts["adaptive_thresholds"]
@@ -193,7 +194,7 @@ class WellDetectorPyfunc(mlflow.pyfunc.PythonModel):  # type: ignore[misc]
 
     def predict(
         self,
-        context: mlflow.pyfunc.PythonModelContext,
+        context: Any,
         model_input: pd.DataFrame,
         params: dict[str, Any] | None = None,
     ) -> pd.DataFrame:

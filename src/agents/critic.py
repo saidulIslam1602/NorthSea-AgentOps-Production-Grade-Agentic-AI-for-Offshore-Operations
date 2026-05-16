@@ -141,7 +141,8 @@ async def run_critic(state: dict[str, Any]) -> dict[str, Any]:
         response = await llm.ainvoke(messages)
         content = response.content if isinstance(response.content, str) else str(response.content)
         review = json.loads(content)
-        tokens = response.usage_metadata.get("total_tokens", 0) if response.usage_metadata else 0  # type: ignore[attr-defined]
+        _usage = getattr(response, "usage_metadata", None)
+        tokens = int(_usage.get("total_tokens", 0)) if _usage is not None else 0
         total_tokens += tokens
 
         confidence_score = float(review.get("confidence_score", 0.5))

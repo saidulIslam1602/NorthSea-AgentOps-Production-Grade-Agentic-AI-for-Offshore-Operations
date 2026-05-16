@@ -53,7 +53,7 @@ class DetectorRegistry:
 
     def __init__(self, tracking_uri: str = "http://localhost:5001") -> None:
         self._tracking_uri = tracking_uri
-        self._models: dict[str, mlflow.pyfunc.PyFuncModel] = {}
+        self._models: dict[str, Any] = {}
 
     def load_all(self, wells: list[str] | None = None) -> dict[str, str]:
         """
@@ -80,7 +80,7 @@ class DetectorRegistry:
         logger.info("DetectorRegistry loaded %d/%d models", len(loaded), len(targets))
         return loaded
 
-    def get(self, well_id: str) -> mlflow.pyfunc.PyFuncModel | None:
+    def get(self, well_id: str) -> Any | None:
         """Return the loaded model for a well, or None if not loaded."""
         return self._models.get(well_id)
 

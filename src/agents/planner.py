@@ -115,7 +115,8 @@ async def run_planner(state: dict[str, Any]) -> dict[str, Any]:
                 }
             )
 
-        tokens = response.usage_metadata.get("total_tokens", 0) if response.usage_metadata else 0  # type: ignore[attr-defined]
+        _usage = getattr(response, "usage_metadata", None)
+        tokens = int(_usage.get("total_tokens", 0)) if _usage is not None else 0
 
         step_record.update(
             {

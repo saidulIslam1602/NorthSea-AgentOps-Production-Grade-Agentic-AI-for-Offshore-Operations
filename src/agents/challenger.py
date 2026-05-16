@@ -196,7 +196,8 @@ Challenge the Critic's conclusion. Look for what was missed."""
         response = await llm.ainvoke(messages)
         content = response.content if isinstance(response.content, str) else str(response.content)
         challenge = json.loads(content)
-        tokens = response.usage_metadata.get("total_tokens", 0) if response.usage_metadata else 0  # type: ignore[attr-defined]
+        _usage = getattr(response, "usage_metadata", None)
+        tokens = int(_usage.get("total_tokens", 0)) if _usage is not None else 0
 
         step_record.update(
             {
@@ -304,7 +305,8 @@ Reconcile these two positions into a final assessment."""
         response = await llm.ainvoke(messages)
         content = response.content if isinstance(response.content, str) else str(response.content)
         reconciled: dict[str, Any] = json.loads(content)
-        tokens = response.usage_metadata.get("total_tokens", 0) if response.usage_metadata else 0  # type: ignore[attr-defined]
+        _usage = getattr(response, "usage_metadata", None)
+        tokens = int(_usage.get("total_tokens", 0)) if _usage is not None else 0
         reconciled["tokens"] = tokens
 
         logger.info(
