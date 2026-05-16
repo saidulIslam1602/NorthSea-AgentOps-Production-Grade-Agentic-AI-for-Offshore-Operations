@@ -175,7 +175,7 @@ jobs:
           with open(results_path) as f:
               data = json.load(f)
 
-          agg = data.get("aggregate", {})
+          agg = data.get("v2_aggregate") or data.get("v1_aggregate") or data.get("aggregate") or {}
           event_recall = agg.get("operational_event_recall", 0)
           day_fpr      = agg.get("day_fpr", 1.0)
 

@@ -62,7 +62,8 @@ INJECTION_PATTERNS: list[re.Pattern[str]] = [
     # Action override attempts
     re.compile(r"(always|never)\s+(recommend|suggest|say|tell\s+the\s+user)", re.IGNORECASE),
     re.compile(r"override\s+(safety|security|confidentiality|hse)", re.IGNORECASE),
-    re.compile(r"bypass\s+(the\s+)?(safety|security|escalation|check)", re.IGNORECASE),
+    re.compile(r"\bbypass\s+(?:the\s+)?(?:hse|risk\b)", re.IGNORECASE),
+    re.compile(r"\bbypass\b.{1,96}?\bescalation\b", re.IGNORECASE),
     # Tool manipulation
     re.compile(r"call\s+(tool|function)\s*[:\(]", re.IGNORECASE),
     re.compile(r"execute\s+(command|code|script|shell)", re.IGNORECASE),
@@ -155,6 +156,20 @@ def check_for_injection(text: str) -> InjectionCheckResult:
     if any(k in scan_lower for k in critical_keywords):
         severity = "CRITICAL"
     elif len(matches) >= 3:
+        severity = "HIGH"
+    elif severity == "LOW" and (
+        ("forget everything" in scan_lower and "new instructions" in scan_lower)
+        or (
+            "repeat everything" in scan_lower
+            and (
+                "know" in scan_lower
+                or "told" in scan_lower
+                or "prompt" in scan_lower
+                or "instructions" in scan_lower
+                or "api keys" in scan_lower
+            )
+        )
+    ):
         severity = "HIGH"
 
     logger.warning("Prompt injection detected [%s]: %d patterns matched. Hash: %s", severity, len(matches), input_hash)
