@@ -29,7 +29,7 @@
     "question": "What caused the ESP failure on Draugen D-2H and what prevention measures were implemented?",
     "expected_topics": ["scale", "overtemperature", "inhibitor", "pump stages", "motor"],
     "ground_truth": "The D-2H ESP tripped due to scale deposition on pump stages that increased motor load by 22%, causing overtemperature (185°C vs 165°C limit). Prevention included increasing scale inhibitor injection from 15 to 25 ppm and scheduling quarterly DTS monitoring.",
-    "document_sources": ["WR-002_Draugen_D2H_ESPFailure.md", "EQ-002_ESP_Operation_Manual.md"]
+    "document_sources": ["WR-011_Draugen_D2H_ESPFailure.md", "EQ-002_ESP_Operation_Manual.md"]
   },
   {
     "id": "GT-005",
@@ -318,5 +318,79 @@
     "expected_topics": ["SEM-B", "firmware", "incompatibility", "MCS upgrade", "4.2.1"],
     "ground_truth": "Communication dropouts on the Volve subsea manifold SEM-B were caused by a firmware version incompatibility introduced by an MCS upgrade in December 2023. The SEM-B was replaced via ROV in February 2024 with firmware 4.2.1. No dropouts occurred after replacement.",
     "document_sources": ["ML-008_Volve_SubseaControl_Maintenance.md"]
+  },
+  {
+    "id": "GT-041",
+    "category": "npd_real_data",
+    "data_source": "Sodir FactPages NPDID 43506, NLOD 2.0 open data",
+    "question": "What was the total oil production from the Volve field over its entire production life, and when did it peak?",
+    "expected_topics": ["63 million barrels", "2008", "2016", "56000 BOPD", "peak 2010", "Equinor"],
+    "ground_truth": "The Volve field (Block 15/9, Sleipner area) produced approximately 63 million barrels of oil in total from 2008 to 2016. Peak production was approximately 56,200 BOPD in 2010. The field was operated by Equinor and produced from the Hugin Formation at around 2,600m depth with API gravity of 35.4 degrees.",
+    "document_sources": ["NPD_Sodir_FactPages_Volve_NPDID43506.md"],
+    "real_data_url": "https://factpages.sodir.no/en/field/pageview/all/43506"
+  },
+  {
+    "id": "GT-042",
+    "category": "npd_real_data",
+    "data_source": "Sodir FactPages NPDID 43566, NLOD 2.0 open data",
+    "question": "What is the production history of the Draugen field in the Norwegian Sea and who are its operators?",
+    "expected_topics": ["354 million barrels", "1993", "Haltenbanken", "Okea", "Shell", "6407/9", "200000 BOPD peak"],
+    "ground_truth": "The Draugen field (Block 6407/9, Haltenbanken area, Norwegian Sea) has produced approximately 354 million barrels of oil since first oil in 1993. Peak production was approximately 200,000 BOPD in 1995. The field was originally operated by Shell, then A.P. Møller, and is now operated by Okea. The reservoir is the Åre Formation at approximately 1,700m depth with API gravity of 41.4 degrees.",
+    "document_sources": ["NPD_Sodir_FactPages_Draugen_NPDID43566.md"],
+    "real_data_url": "https://factpages.sodir.no/en/field/pageview/all/43566"
+  },
+  {
+    "id": "GT-043",
+    "category": "npd_real_data",
+    "data_source": "Sodir FactPages NPDID 43718, NLOD 2.0 open data",
+    "question": "What is the current late-field water cut on Gullfaks and what production optimisation challenges does this create?",
+    "expected_topics": ["90%", "water cut", "Gullfaks", "2.7 billion barrels", "Equinor", "three platforms", "water handling"],
+    "ground_truth": "Gullfaks (Block 34/10, Northern North Sea), operated by Equinor, has produced approximately 2.7 billion barrels total since 1986 across three platforms (A, B, C). The late-field water cut is approximately 90%, meaning that for every barrel of oil produced, 9 barrels of water must be handled. This creates significant water handling capacity constraints and increases OPEX per barrel, making production optimisation critical for economic viability.",
+    "document_sources": ["NPD_Sodir_FactPages_Gullfaks_NPDID43718.md"],
+    "real_data_url": "https://factpages.sodir.no/en/field/pageview/all/43718"
+  },
+  {
+    "id": "GT-044",
+    "category": "npd_real_data",
+    "data_source": "Sodir FactPages NPDID 43756, NLOD 2.0 open data",
+    "question": "How does Oseberg's production profile compare to Volve, and what does this imply for anomaly detection thresholds?",
+    "expected_topics": ["1.9 billion barrels", "Oseberg", "63 million barrels", "Volve", "different scale", "baseline", "threshold calibration"],
+    "ground_truth": "Oseberg (Block 30/6) has produced approximately 1.9 billion barrels since 1988, compared to Volve's ~63 million barrels — a 30x difference in scale. Oseberg peak was 570,000 BOPD vs Volve's 56,200 BOPD. This means anomaly detection thresholds must be field-specific: a 5% oil rate decline on Oseberg represents ~5,000 BOPD lost vs ~2,800 BOPD on Volve. Z-score baselines and Isolation Forest models must be trained per field to avoid false positives or missed anomalies caused by scale differences.",
+    "document_sources": ["NPD_Sodir_FactPages_Oseberg_NPDID43756.md"],
+    "real_data_url": "https://factpages.sodir.no/en/field/pageview/all/43756"
+  },
+  {
+    "id": "GT-045",
+    "category": "npd_real_data",
+    "data_source": "Sodir NLOD 2.0 open data + Equinor Volve Open Dataset",
+    "question": "What are the well names in the Volve field and which are producers vs injectors?",
+    "expected_topics": ["15/9-F-1C", "15/9-F-4", "15/9-F-5", "15/9-F-11H", "15/9-F-12H", "injector", "producer"],
+    "ground_truth": "The Volve field production wells include 15/9-F-1C, 15/9-F-4, and 15/9-F-5 as producers, while 15/9-F-11H and 15/9-F-12H are water injectors. These are the core wells from the Equinor Volve Open Dataset (released 2019), which contains real production data, LAS well logs, seismic, and Eclipse reservoir simulation files. The dataset is publicly available under the Equinor Open Data license and is used as the primary authentic data source for this system's anomaly detection baselines.",
+    "document_sources": ["Equinor_Volve_OpenDataset_WellList.md"],
+    "real_data_url": "https://www.equinor.com/energy/volve-data-sharing"
+  },
+  {
+    "id": "GT-046",
+    "category": "calibration",
+    "question": "What is Expected Calibration Error (ECE) and why is it important for an AI agent making production recommendations?",
+    "expected_topics": ["ECE", "confidence", "accuracy", "calibration", "offshore", "safety", "overconfident"],
+    "ground_truth": "Expected Calibration Error (ECE) measures whether an AI agent's stated confidence matches its actual accuracy. ECE = Σ (|Bin| / N) × |accuracy(bin) - confidence(bin)|. A perfectly calibrated agent has ECE = 0.0. In offshore production operations, an overconfident agent (high confidence, wrong answer) is dangerous — it may suppress human escalation for cases that require engineer review. For the NorthSea AgentOps agent, ECE is measured on the Critic's confidence scores against ground-truth outcomes. Escalation recall is weighted more heavily than precision because a missed escalation (false negative) carries higher risk than an unnecessary one.",
+    "document_sources": ["AGENT_EVAL_METHODOLOGY.md"]
+  },
+  {
+    "id": "GT-047",
+    "category": "multi_agent",
+    "question": "What is the role of the Challenger agent in the NorthSea AgentOps investigation pipeline?",
+    "expected_topics": ["Challenger", "adversarial", "alternative hypotheses", "Critic", "Reconciler", "multi-agent", "HIGH risk"],
+    "ground_truth": "The Challenger agent is an adversarial second reviewer that activates when the primary Critic's confidence is below 0.80, or when risk level is HIGH or CRITICAL. It independently reviews the same evidence and tries to identify alternative root cause hypotheses the Critic missed. A Reconciler agent then synthesises both positions: if the Challenger disagrees, confidence is reduced conservatively. This implements the 'critic-actor with adversarial validation' multi-agent coordination pattern — analogous to the independent verification requirement in NORSOK-style safety-critical operations. The Challenger is skipped for LOW risk, high-confidence cases to avoid unnecessary LLM cost.",
+    "document_sources": ["AGENT_ARCHITECTURE.md"]
+  },
+  {
+    "id": "GT-048",
+    "category": "react_pattern",
+    "question": "When should the ReAct pattern be used instead of the Plan-Execute-Critic pipeline for an offshore operational query?",
+    "expected_topics": ["ReAct", "single-turn", "Plan-Execute", "simple", "operational Q&A", "latency", "diagnostic"],
+    "ground_truth": "The ReAct (Reasoning + Acting) pattern (Yao et al., 2022) should be used for single-turn operational queries that do not require upfront multi-step planning — e.g. 'What is the current BHP on F-4?', 'Retrieve the HSE procedure for H2S level A3', or 'Check maintenance logs for D-3H'. The Plan-Execute-Critic pipeline is reserved for complex anomaly investigations where multiple evidence sources must be systematically gathered, cross-validated by a Critic, and challenged adversarially. Using Plan-Execute-Critic for simple queries wastes tokens and adds latency; using ReAct for complex investigations risks missing evidence. Both patterns share the same tool allowlist and injection guards.",
+    "document_sources": ["AGENT_ARCHITECTURE.md"]
   }
 ]

@@ -23,13 +23,17 @@ jobs:
           cache: pip
 
       - name: Install dev dependencies
-        run: pip install ruff mypy
+        run: pip install -e ".[dev]"
 
       - name: Run ruff linter
         run: ruff check src/ eval/ tests/
 
       - name: Run ruff formatter check
         run: ruff format --check src/ eval/ tests/
+
+      - name: Run mypy type checker
+        run: mypy src/ --ignore-missing-imports --no-error-summary
+        continue-on-error: false
 
   unit-tests:
     name: Unit Tests
@@ -103,6 +107,39 @@ jobs:
           OPENAI_API_KEY: "sk-test-placeholder"
           DATABASE_URL: "postgresql+psycopg://northsea:test@localhost:5432/test"
         run: python -m eval.adversarial_tests
+
+  agent-eval:
+    name: Agent Evaluation (plan quality, escalation calibration, ECE)
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Run agent evaluation suite
+        env:
+          OPENAI_API_KEY: "sk-test-placeholder"
+          DATABASE_URL: "postgresql+psycopg://northsea:test@localhost:5432/test"
+          MLFLOW_TRACKING_URI: "file:./mlruns"
+        run: python -m eval.agent_eval --output eval/agent_eval_results.json
+
+      - name: Run offline calibration check
+        run: python -m eval.calibration
+
+      - name: Upload agent eval results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: agent-eval-results
+          path: eval/agent_eval_results.json
 
   integration-tests:
     name: Integration Tests

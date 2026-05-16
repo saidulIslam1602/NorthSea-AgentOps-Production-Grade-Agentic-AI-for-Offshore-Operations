@@ -73,35 +73,53 @@ class InjectionCheckResult:
     input_hash: str
 
 
+def _build_allowlist_pattern(term: str) -> re.Pattern[str]:
+    """Compile a case-insensitive literal-match pattern for an allowlist term."""
+    return re.compile(re.escape(term), re.IGNORECASE)
+
+
+# Pre-compiled allowlist patterns (each anchored to a word-level match)
+_ALLOWLIST_PATTERNS: list[re.Pattern[str]] = [
+    _build_allowlist_pattern(t) for t in ALLOWLIST_TERMS
+]
+
+
+def _mask_allowlisted_spans(text: str) -> str:
+    """
+    Replace allowlisted operational phrases with a neutral placeholder before
+    injection scanning.  This prevents legitimate terms from blocking detection
+    of genuine injections that co-occur with them in the same string.
+    """
+    masked = text
+    for pat in _ALLOWLIST_PATTERNS:
+        masked = pat.sub("__ALLOWLISTED__", masked)
+    return masked
+
+
 def check_for_injection(text: str) -> InjectionCheckResult:
     """
     Scan text for prompt injection patterns.
+
+    The allowlist is applied by *masking* operational phrases before scanning,
+    not by short-circuiting the whole check.  This prevents an attacker from
+    prepending "bypass valve" to an injection payload to suppress detection.
 
     Returns:
         InjectionCheckResult with detection details and sanitised text.
     """
     input_hash = hashlib.sha256(text.encode()).hexdigest()[:16]
-    text_lower = text.lower()
 
-    # Check allowlist first
-    for allowed in ALLOWLIST_TERMS:
-        if allowed in text_lower:
-            return InjectionCheckResult(
-                is_clean=True,
-                matches=[],
-                sanitised_text=text,
-                severity="NONE",
-                input_hash=input_hash,
-            )
+    # Mask allowlisted phrases so they cannot suppress injection detection
+    scan_target = _mask_allowlisted_spans(text)
 
     matches: list[str] = []
-    sanitised = text
+    sanitised = text  # redact from original, not the masked copy
 
     for pattern in INJECTION_PATTERNS:
-        found = pattern.findall(text)
+        found = pattern.findall(scan_target)
         if found:
             matches.extend([str(m) for m in found])
-            # Redact the matched portion
+            # Redact from the original text so the caller gets a usable string
             sanitised = pattern.sub("[REDACTED: potential injection]", sanitised)
 
     if not matches:

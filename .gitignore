@@ -34,9 +34,11 @@ htmlcov/
 mlruns/
 mlartifacts/
 
-# Data (large files)
+# Data (large binary files — download manually per README)
 data/raw/
 data/volve/
+data/Volve_Data/
+data/cache/
 *.parquet
 *.feather
 

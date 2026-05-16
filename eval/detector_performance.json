@@ -1,0 +1,280 @@
+{
+  "generated_at": "2026-05-16T11:01:56.210014Z",
+  "data_source": "Equinor Volve Open Dataset \u2014 daily production 2007-2016",
+  "model": "WellAnomalyDetector (Z-score + Isolation Forest, per-well)",
+  "train_split": 0.75,
+  "anomaly_types": [
+    "water_breakthrough",
+    "oil_rate_collapse",
+    "gor_spike",
+    "bhp_depletion"
+  ],
+  "n_wells_evaluated": 6,
+  "aggregate": {
+    "macro_precision": 0.2236,
+    "macro_recall": 0.9237,
+    "macro_f1": 0.3084,
+    "macro_fpr": 0.5551,
+    "macro_accuracy": 0.5165,
+    "total_tp": 110,
+    "total_fp": 1069,
+    "total_fn": 9,
+    "total_tn": 814,
+    "per_anomaly_type_recall": {
+      "oil_rate_collapse": 0.8333,
+      "gor_spike": 1.0,
+      "water_breakthrough": 1.0,
+      "bhp_depletion": 1.0
+    },
+    "score_histogram_bins": [
+      0.0,
+      0.1,
+      0.2,
+      0.3,
+      0.4,
+      0.5,
+      0.6,
+      0.7,
+      0.8,
+      0.9
+    ],
+    "score_histogram_normal": [
+      814,
+      0,
+      0,
+      202,
+      340,
+      245,
+      92,
+      46,
+      36,
+      108
+    ],
+    "score_histogram_anomalous": [
+      9,
+      0,
+      0,
+      6,
+      24,
+      21,
+      5,
+      27,
+      2,
+      25
+    ],
+    "n_normal_scores": 1883,
+    "n_anomalous_scores": 119,
+    "mean_score_normal": 0.3137,
+    "mean_score_anomalous": 0.6254
+  },
+  "per_well": [
+    {
+      "well_id": "15/9-F-1 C",
+      "train_days": 321,
+      "test_days": 108,
+      "precision": 0.3333,
+      "recall": 0.75,
+      "f1": 0.4615,
+      "fpr": 0.3409,
+      "accuracy": 0.6759,
+      "tp": 15,
+      "fp": 30,
+      "fn": 5,
+      "tn": 58,
+      "n_anomaly_days": 20,
+      "n_normal_days": 88,
+      "per_type_recall": {
+        "water_breakthrough": 1.0,
+        "oil_rate_collapse": 0.0,
+        "gor_spike": 1.0,
+        "bhp_depletion": 1.0
+      },
+      "mean_score_normal": 0.1788,
+      "mean_score_anomalous": 0.4717
+    },
+    {
+      "well_id": "15/9-F-11",
+      "train_days": 840,
+      "test_days": 281,
+      "precision": 0.1143,
+      "recall": 1.0,
+      "f1": 0.2051,
+      "fpr": 0.5939,
+      "accuracy": 0.4484,
+      "tp": 20,
+      "fp": 155,
+      "fn": 0,
+      "tn": 106,
+      "n_anomaly_days": 20,
+      "n_normal_days": 261,
+      "per_type_recall": {
+        "water_breakthrough": 1.0,
+        "oil_rate_collapse": 1.0,
+        "gor_spike": 1.0,
+        "bhp_depletion": 1.0
+      },
+      "mean_score_normal": 0.3264,
+      "mean_score_anomalous": 0.7052
+    },
+    {
+      "well_id": "15/9-F-12",
+      "train_days": 2123,
+      "test_days": 708,
+      "precision": 0.0419,
+      "recall": 1.0,
+      "f1": 0.0805,
+      "fpr": 0.6642,
+      "accuracy": 0.3545,
+      "tp": 20,
+      "fp": 457,
+      "fn": 0,
+      "tn": 231,
+      "n_anomaly_days": 20,
+      "n_normal_days": 688,
+      "per_type_recall": {
+        "water_breakthrough": 1.0,
+        "oil_rate_collapse": 1.0,
+        "gor_spike": 1.0,
+        "bhp_depletion": 1.0
+      },
+      "mean_score_normal": 0.365,
+      "mean_score_anomalous": 0.7628
+    },
+    {
+      "well_id": "15/9-F-14",
+      "train_days": 2040,
+      "test_days": 680,
+      "precision": 0.0602,
+      "recall": 1.0,
+      "f1": 0.1136,
+      "fpr": 0.4727,
+      "accuracy": 0.5412,
+      "tp": 20,
+      "fp": 312,
+      "fn": 0,
+      "tn": 348,
+      "n_anomaly_days": 20,
+      "n_normal_days": 660,
+      "per_type_recall": {
+        "water_breakthrough": 1.0,
+        "oil_rate_collapse": 1.0,
+        "gor_spike": 1.0,
+        "bhp_depletion": 1.0
+      },
+      "mean_score_normal": 0.2623,
+      "mean_score_anomalous": 0.6557
+    },
+    {
+      "well_id": "15/9-F-15 D",
+      "train_days": 574,
+      "test_days": 192,
+      "precision": 0.152,
+      "recall": 0.95,
+      "f1": 0.2621,
+      "fpr": 0.6163,
+      "accuracy": 0.4427,
+      "tp": 19,
+      "fp": 106,
+      "fn": 1,
+      "tn": 66,
+      "n_anomaly_days": 20,
+      "n_normal_days": 172,
+      "per_type_recall": {
+        "water_breakthrough": 1.0,
+        "oil_rate_collapse": 1.0,
+        "gor_spike": 1.0,
+        "bhp_depletion": 1.0
+      },
+      "mean_score_normal": 0.3571,
+      "mean_score_anomalous": 0.6422
+    },
+    {
+      "well_id": "15/9-F-5",
+      "train_days": 96,
+      "test_days": 33,
+      "precision": 0.64,
+      "recall": 0.8421,
+      "f1": 0.7273,
+      "fpr": 0.6429,
+      "accuracy": 0.6364,
+      "tp": 16,
+      "fp": 9,
+      "fn": 3,
+      "tn": 5,
+      "n_anomaly_days": 19,
+      "n_normal_days": 14,
+      "per_type_recall": {
+        "water_breakthrough": 1.0,
+        "oil_rate_collapse": 1.0,
+        "gor_spike": 1.0,
+        "bhp_depletion": 1.0
+      },
+      "mean_score_normal": 0.2904,
+      "mean_score_anomalous": 0.5092
+    }
+  ],
+  "well_field_stats": {
+    "15/9-F-1 C": {
+      "producing_days": 429,
+      "peak_oil_bopd": 9748.0,
+      "avg_oil_bopd": 2605.4876456876455,
+      "peak_water_cut_pct": 96.3,
+      "avg_water_cut_pct": 50.96270396270396,
+      "avg_gor_scf_bbl": 849.2121212121212,
+      "avg_bhp_psi": 3346.2703962703963
+    },
+    "15/9-F-11": {
+      "producing_days": 1121,
+      "peak_oil_bopd": 12986.0,
+      "avg_oil_bopd": 6434.382872435325,
+      "peak_water_cut_pct": 91.0,
+      "avg_water_cut_pct": 38.31846565566458,
+      "avg_gor_scf_bbl": 864.7903657448707,
+      "avg_bhp_psi": 3415.514771709937
+    },
+    "15/9-F-12": {
+      "producing_days": 2831,
+      "peak_oil_bopd": 37121.5,
+      "avg_oil_bopd": 10173.217590957258,
+      "peak_water_cut_pct": 97.5,
+      "avg_water_cut_pct": 59.59731543624161,
+      "avg_gor_scf_bbl": 852.2112327799364,
+      "avg_bhp_psi": 3724.5298588490773
+    },
+    "15/9-F-14": {
+      "producing_days": 2720,
+      "peak_oil_bopd": 35502.0,
+      "avg_oil_bopd": 9115.537022058823,
+      "peak_water_cut_pct": 97.3,
+      "avg_water_cut_pct": 65.10136029411765,
+      "avg_gor_scf_bbl": 845.6378676470588,
+      "avg_bhp_psi": 3595.0203703703705
+    },
+    "15/9-F-15 D": {
+      "producing_days": 766,
+      "peak_oil_bopd": 3227.4,
+      "avg_oil_bopd": 1219.5207571801566,
+      "peak_water_cut_pct": 68.6,
+      "avg_water_cut_pct": 19.25678851174935,
+      "avg_gor_scf_bbl": 854.5809399477807,
+      "avg_bhp_psi": 2990.985639686684
+    },
+    "15/9-F-5": {
+      "producing_days": 129,
+      "peak_oil_bopd": 2495.8,
+      "avg_oil_bopd": 2006.920930232558,
+      "peak_water_cut_pct": 80.0,
+      "avg_water_cut_pct": 24.344186046511627,
+      "avg_gor_scf_bbl": 896.0387596899225,
+      "avg_bhp_psi": 0
+    }
+  },
+  "well_date_ranges": {
+    "15/9-F-1 C": "2014-04-22 \u2192 2016-04-06",
+    "15/9-F-11": "2013-07-24 \u2192 2016-09-17",
+    "15/9-F-12": "2008-02-12 \u2192 2016-08-12",
+    "15/9-F-14": "2008-07-13 \u2192 2016-07-13",
+    "15/9-F-15 D": "2014-01-16 \u2192 2016-07-06",
+    "15/9-F-5": "2016-04-20 \u2192 2016-08-26"
+  }
+}
