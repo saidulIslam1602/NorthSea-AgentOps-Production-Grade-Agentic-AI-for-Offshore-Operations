@@ -32,6 +32,8 @@ htmlcov/
 
 # MLflow
 mlruns/
+dvc-store/
+.dvc/tmp/
 mlartifacts/
 
 # Data (large binary files — download manually per README)

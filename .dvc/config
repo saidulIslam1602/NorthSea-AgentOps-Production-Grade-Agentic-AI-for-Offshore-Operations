@@ -1,0 +1,7 @@
+[core]
+    no_scm = True
+    remote = local-store
+['remote "local-store"']
+    url = ../dvc-store
+['remote "azure-blob"']
+    url = azure://northsea-agentops/dvc

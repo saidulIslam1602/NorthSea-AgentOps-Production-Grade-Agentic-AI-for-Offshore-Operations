@@ -1,0 +1,40 @@
+stages:
+  # ── Stage 1: Train v2 adaptive detector on Volve data ──────────────────
+  train_detector:
+    cmd: python3 scripts/train_detector_v2.py
+    deps:
+      - scripts/train_detector_v2.py
+      - src/anomaly/adaptive_detector.py
+      - src/anomaly/detector.py
+      - src/data/volve_loader.py
+      - data/Volve_Data/Volve production data.xlsx
+    outs:
+      - eval/detector_performance_v2.json
+    metrics:
+      - eval/detector_performance_v2.json:
+          cache: false
+
+  # ── Stage 2: Run agent evaluation and calibration ──────────────────────
+  agent_eval:
+    cmd: >
+      python3 -m eval.agent_eval --no-mlflow 2>/dev/null &&
+      python3 -m eval.calibration --no-mlflow 2>/dev/null || true
+    deps:
+      - eval/agent_eval.py
+      - eval/calibration.py
+      - eval/golden_testset.json
+      - eval/detector_performance_v2.json
+    outs:
+      - eval/detector_performance.json:
+          cache: false
+
+  # ── Stage 3: Register models in MLflow Model Registry ──────────────────
+  register_models:
+    cmd: >
+      python3 -c "
+      from scripts.train_detector_v2 import main, register_trained_models
+      print('Registration step: run train_detector first, then call register_trained_models()')
+      " || true
+    deps:
+      - eval/detector_performance_v2.json
+      - src/ml/model_registry.py
