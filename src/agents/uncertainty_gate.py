@@ -20,7 +20,6 @@ from typing import Any
 from src.config import get_settings
 from src.schemas.domain import (
     AnomalyAlert,
-    Citation,
     EscalationReason,
     InvestigationResult,
     RiskLevel,
@@ -65,8 +64,7 @@ def evaluate_escalation(
 
     # Rule 5: check for missing data indicators
     data_missing = any(
-        "no data" in str(s.get("output", "")).lower()
-        or "not found" in str(s.get("output", "")).lower()
+        "no data" in str(s.get("output", "")).lower() or "not found" in str(s.get("output", "")).lower()
         for s in agent_steps
     )
     if data_missing and len(agent_steps) > 0:
@@ -80,16 +78,19 @@ def evaluate_escalation(
     message = None
     if should_escalate:
         reason_texts = {
-            EscalationReason.LOW_CONFIDENCE: f"AI confidence {confidence_score:.0%} is below threshold {settings.agent_confidence_threshold:.0%}",
-            EscalationReason.LOW_EVIDENCE_COVERAGE: f"Evidence coverage {evidence_coverage:.0%} is below threshold {settings.agent_evidence_coverage_threshold:.0%}",
+            EscalationReason.LOW_CONFIDENCE: (
+                f"AI confidence {confidence_score:.0%} is below threshold {settings.agent_confidence_threshold:.0%}"
+            ),
+            EscalationReason.LOW_EVIDENCE_COVERAGE: (
+                f"Evidence coverage {evidence_coverage:.0%} is below threshold "
+                f"{settings.agent_evidence_coverage_threshold:.0%}"
+            ),
             EscalationReason.HIGH_HSE_RISK: f"Risk level {risk_level.value} requires human review per HSE-OPS-001",
             EscalationReason.MISSING_DATA: "Insufficient telemetry or document data available",
             EscalationReason.INJECTION_DETECTED: "Potential prompt injection detected in retrieved content",
             EscalationReason.OPERATOR_OVERRIDE: "Operator manually requested human review",
         }
-        reason_summary = "; ".join(
-            reason_texts.get(r, r.value) for r in unique_reasons
-        )
+        reason_summary = "; ".join(reason_texts.get(r, r.value) for r in unique_reasons)
         message = (
             f"Investigation for well {alert.well_id} requires human review. "
             f"Reasons: {reason_summary}. "
@@ -120,13 +121,18 @@ def apply_uncertainty_gate(state: dict[str, Any]) -> dict[str, Any]:
     if should_escalate:
         logger.warning(
             "ESCALATING %s: confidence=%.2f, coverage=%.2f, risk=%s, reasons=%s",
-            alert.well_id, confidence_score, evidence_coverage,
-            risk_level.value, [r.value for r in reasons],
+            alert.well_id,
+            confidence_score,
+            evidence_coverage,
+            risk_level.value,
+            [r.value for r in reasons],
         )
     else:
         logger.info(
             "RECOMMENDING %s: confidence=%.2f, risk=%s",
-            alert.well_id, confidence_score, risk_level.value,
+            alert.well_id,
+            confidence_score,
+            risk_level.value,
         )
 
     return {
@@ -138,7 +144,6 @@ def apply_uncertainty_gate(state: dict[str, Any]) -> dict[str, Any]:
 
 def build_investigation_result(state: dict[str, Any]) -> InvestigationResult:
     """Build the final InvestigationResult from completed agent state."""
-    import time
 
     alert: AnomalyAlert = state["alert"]
     critic_review: dict[str, Any] = state.get("_critic_review", {})

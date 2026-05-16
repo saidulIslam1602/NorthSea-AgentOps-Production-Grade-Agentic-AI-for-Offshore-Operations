@@ -35,6 +35,7 @@ class AgentState(dict):
       - agent_steps: audit trail of every agent action
       - error: non-None if a recoverable error occurred
     """
+
     messages: Annotated[list[BaseMessage], add_messages]
     alert: AnomalyAlert
     plan_steps: list[dict[str, Any]]

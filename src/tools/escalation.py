@@ -8,14 +8,13 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime
 from typing import Any
 from uuid import uuid4
 
 import psycopg
 
 from src.config import get_settings
-from src.schemas.domain import EscalationRecord, EscalationReason, RiskLevel
+from src.schemas.domain import EscalationReason, EscalationRecord, RiskLevel
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -23,7 +22,6 @@ settings = get_settings()
 
 async def create_escalation(state: dict[str, Any]) -> EscalationRecord:
     """Persist an escalation record from the investigation state."""
-    from src.db.session import AsyncSessionLocal
 
     alert = state["alert"]
     investigation_id = state.get("investigation_id")
@@ -91,7 +89,10 @@ async def create_escalation(state: dict[str, Any]) -> EscalationRecord:
 
     logger.warning(
         "ESCALATION created: %s for well %s (risk=%s, confidence=%.2f)",
-        record.escalation_id, alert.well_id, risk_level.value, confidence_score,
+        record.escalation_id,
+        alert.well_id,
+        risk_level.value,
+        confidence_score,
     )
 
     return record

@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from src.safety.injection_guard import check_for_injection, check_user_query
+from src.safety.injection_guard import check_for_injection
 
 ADVERSARIAL_TESTS: list[dict[str, Any]] = [
     # ─── Direct system override ────────────────────────────────────────────────
@@ -165,10 +165,7 @@ def run_adversarial_tests() -> dict[str, Any]:
         if test["expected_detection"] and was_detected:
             severity_levels = ["NONE", "LOW", "HIGH", "CRITICAL"]
             min_level = test.get("expected_severity_min", "LOW")
-            severity_ok = (
-                severity_levels.index(result.severity) >=
-                severity_levels.index(min_level)
-            )
+            severity_ok = severity_levels.index(result.severity) >= severity_levels.index(min_level)
 
         test_passed = detection_correct and severity_ok
 
@@ -177,19 +174,21 @@ def run_adversarial_tests() -> dict[str, Any]:
         else:
             failed += 1
 
-        results.append({
-            "id": test["id"],
-            "description": test["description"],
-            "attack_vector": test["attack_vector"],
-            "expected_detection": test["expected_detection"],
-            "actual_detection": was_detected,
-            "expected_severity_min": test.get("expected_severity_min"),
-            "actual_severity": result.severity,
-            "detection_correct": detection_correct,
-            "severity_ok": severity_ok,
-            "passed": test_passed,
-            "matches": result.matches[:3],
-        })
+        results.append(
+            {
+                "id": test["id"],
+                "description": test["description"],
+                "attack_vector": test["attack_vector"],
+                "expected_detection": test["expected_detection"],
+                "actual_detection": was_detected,
+                "expected_severity_min": test.get("expected_severity_min"),
+                "actual_severity": result.severity,
+                "detection_correct": detection_correct,
+                "severity_ok": severity_ok,
+                "passed": test_passed,
+                "matches": result.matches[:3],
+            }
+        )
 
     summary = {
         "total": len(ADVERSARIAL_TESTS),
@@ -204,14 +203,15 @@ def run_adversarial_tests() -> dict[str, Any]:
 
 def main() -> None:
     import logging
+
     logging.basicConfig(level=logging.WARNING)
 
     print("Running adversarial prompt injection tests...\n")
     summary = run_adversarial_tests()
 
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     print(f"Adversarial Test Results: {summary['passed']}/{summary['total']} passed")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     for r in summary["results"]:
         status = "✅ PASS" if r["passed"] else "❌ FAIL"
         print(f"  {status} [{r['id']}] {r['description'][:50]}")

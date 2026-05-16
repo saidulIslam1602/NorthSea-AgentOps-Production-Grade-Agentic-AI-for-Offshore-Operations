@@ -22,10 +22,7 @@ Usage:
 
 from __future__ import annotations
 
-import json
-import math
-from dataclasses import dataclass, field
-from pathlib import Path
+from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
@@ -34,6 +31,7 @@ import numpy as np
 @dataclass
 class CalibrationBin:
     """A single bin in the ECE calculation."""
+
     bin_lower: float
     bin_upper: float
     count: int
@@ -49,16 +47,17 @@ class CalibrationBin:
 @dataclass
 class CalibrationResult:
     """Full calibration analysis for a set of predictions."""
-    ece: float                              # Expected Calibration Error
-    mce: float                              # Maximum Calibration Error
-    ace: float                              # Average Calibration Error (unweighted)
-    overconfidence_rate: float              # fraction of bins where conf > accuracy
+
+    ece: float  # Expected Calibration Error
+    mce: float  # Maximum Calibration Error
+    ace: float  # Average Calibration Error (unweighted)
+    overconfidence_rate: float  # fraction of bins where conf > accuracy
     bins: list[CalibrationBin]
     n_samples: int
     n_bins: int
     avg_confidence: float
     avg_accuracy: float
-    calibration_grade: str                  # "EXCELLENT" | "GOOD" | "ACCEPTABLE" | "POOR"
+    calibration_grade: str  # "EXCELLENT" | "GOOD" | "ACCEPTABLE" | "POOR"
 
     def __str__(self) -> str:
         return (
@@ -164,14 +163,16 @@ def compute_ece(
         if avg_conf > accuracy:
             overconfident_bins += 1
 
-        bins.append(CalibrationBin(
-            bin_lower=lower,
-            bin_upper=upper,
-            count=bin_count,
-            avg_confidence=avg_conf,
-            accuracy=accuracy,
-            calibration_error=cal_error,
-        ))
+        bins.append(
+            CalibrationBin(
+                bin_lower=lower,
+                bin_upper=upper,
+                count=bin_count,
+                avg_confidence=avg_conf,
+                accuracy=accuracy,
+                calibration_error=cal_error,
+            )
+        )
 
     mce = max(calibration_errors) if calibration_errors else 0.0
     ace = sum(calibration_errors) / len(calibration_errors) if calibration_errors else 0.0
@@ -215,6 +216,8 @@ def compute_escalation_calibration(
         dict with precision, recall, F1, and ECE for the escalation decision.
     """
     assert len(confidences) == len(should_escalate) == len(actually_required_escalation)
+
+    _ = confidence_threshold
 
     predicted = np.array(should_escalate, dtype=bool)
     actual = np.array(actually_required_escalation, dtype=bool)
@@ -266,9 +269,7 @@ def compute_brier_score(confidences: list[float], correct: list[bool]) -> float:
     n = len(confidences)
     if n == 0:
         return float("nan")
-    return float(
-        sum((c - float(o)) ** 2 for c, o in zip(confidences, correct)) / n
-    )
+    return float(sum((c - float(o)) ** 2 for c, o in zip(confidences, correct, strict=False)) / n)
 
 
 def log_calibration_to_mlflow(
@@ -281,6 +282,7 @@ def log_calibration_to_mlflow(
     """Log calibration metrics to MLflow."""
     try:
         import mlflow
+
         mlflow.set_experiment(experiment_name)
         with mlflow.start_run(run_name=run_name):
             mlflow.log_metric("calibration_ece", result.ece)
@@ -336,14 +338,14 @@ CALIBRATION_VALIDATION_CASES: list[dict[str, Any]] = [
         "description": "ESD-related event — always requires escalation per HSE-OPS-005",
         "confidence": 0.91,
         "correct": True,
-        "should_escalate": True,      # correctly escalated (HSE rule)
+        "should_escalate": True,  # correctly escalated (HSE rule)
         "actually_required_escalation": True,
     },
     {
         "description": "Overconfident choke diagnosis with sparse evidence",
         "confidence": 0.85,
-        "correct": False,             # wrong root cause
-        "should_escalate": False,     # missed escalation
+        "correct": False,  # wrong root cause
+        "should_escalate": False,  # missed escalation
         "actually_required_escalation": True,
     },
     {
@@ -379,9 +381,7 @@ def run_offline_calibration_check() -> None:
 
     result = compute_ece(confidences, correct)
     brier = compute_brier_score(confidences, correct)
-    escalation = compute_escalation_calibration(
-        confidences, should_escalate, actually_required
-    )
+    escalation = compute_escalation_calibration(confidences, should_escalate, actually_required)
 
     print("\n=== Offline Calibration Check ===")
     print(f"Samples: {result.n_samples}")
@@ -390,7 +390,7 @@ def run_offline_calibration_check() -> None:
     print(f"Brier Score: {brier:.4f}")
     print(f"Avg Confidence: {result.avg_confidence:.3f}")
     print(f"Avg Accuracy:   {result.avg_accuracy:.3f}")
-    print(f"\nEscalation Gate:")
+    print("\nEscalation Gate:")
     print(f"  Precision: {escalation['precision']:.3f}")
     print(f"  Recall:    {escalation['recall']:.3f}  (miss rate: {escalation['miss_rate']:.3f})")
     print(f"  F1:        {escalation['f1_score']:.3f}")

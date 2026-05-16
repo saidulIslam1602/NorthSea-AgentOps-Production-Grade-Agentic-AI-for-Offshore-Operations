@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-import pytest
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from src.anomaly.detector import WellAnomalyDetector, _build_description
 from src.schemas.domain import SeverityLevel
@@ -19,7 +18,7 @@ def make_reading(
     well_id: str = "TEST-1H",
 ) -> dict:
     return {
-        "timestamp": datetime.now(timezone.utc),
+        "timestamp": datetime.now(UTC),
         "well_id": well_id,
         "field_name": "TestField",
         "oil_rate_bopd": oil_rate,
@@ -95,10 +94,11 @@ class TestWellAnomalyDetector:
 
 class TestSyntheticGenerator:
     def test_generate_timeseries(self) -> None:
-        from datetime import datetime, timezone
+        from datetime import datetime
+
         from src.data.synthetic_generator import generate_well_timeseries
 
-        df = generate_well_timeseries("D-1H", "Draugen", datetime(2024, 1, 1, tzinfo=timezone.utc), n_hours=100)
+        df = generate_well_timeseries("D-1H", "Draugen", datetime(2024, 1, 1, tzinfo=UTC), n_hours=100)
         assert len(df) == 100
         assert "oil_rate_bopd" in df.columns
         assert "water_cut_pct" in df.columns
@@ -106,15 +106,20 @@ class TestSyntheticGenerator:
         assert (df["water_cut_pct"] <= 100).all()
 
     def test_anomaly_injection_changes_values(self) -> None:
-        from datetime import datetime, timezone
+        from datetime import datetime
+
         from src.data.synthetic_generator import generate_well_timeseries
 
         df_normal = generate_well_timeseries(
-            "TEST-1H", "Test", datetime(2024, 1, 1, tzinfo=timezone.utc), n_hours=200, anomaly_type=None
+            "TEST-1H", "Test", datetime(2024, 1, 1, tzinfo=UTC), n_hours=200, anomaly_type=None
         )
         df_anomaly = generate_well_timeseries(
-            "TEST-1H", "Test", datetime(2024, 1, 1, tzinfo=timezone.utc),
-            n_hours=200, anomaly_type="water_breakthrough", anomaly_onset_hour=100
+            "TEST-1H",
+            "Test",
+            datetime(2024, 1, 1, tzinfo=UTC),
+            n_hours=200,
+            anomaly_type="water_breakthrough",
+            anomaly_onset_hour=100,
         )
         # After onset, water cut should be higher in anomaly dataset
         late_normal = df_normal.iloc[150:]["water_cut_pct"].mean()

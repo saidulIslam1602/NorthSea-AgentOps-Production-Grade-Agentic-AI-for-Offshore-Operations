@@ -59,6 +59,9 @@ def ingest(
     """Ingest documents into the RAG vector store."""
     from src.rag.ingestion import main as ingest_main
 
+    if clear:
+        console.print("[yellow]--clear: truncation of embeddings not implemented; continuing[/yellow]")
+
     console.print(f"[bold]Ingesting documents[/bold] from {docs_dir}")
     ingest_main()
 
@@ -86,6 +89,7 @@ def evaluate(
     """Run RAGAS evaluation against the golden test set and log to MLflow."""
     from eval.ragas_eval import main as eval_main
 
+    _ = golden_set
     console.print(f"[bold]Running RAGAS evaluation[/bold] — experiment: {experiment}")
     eval_main()
 

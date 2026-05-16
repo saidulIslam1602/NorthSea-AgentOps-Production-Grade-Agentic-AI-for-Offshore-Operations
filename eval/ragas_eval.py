@@ -119,15 +119,17 @@ async def run_ragas_evaluation(
         logger.error("No evaluation data collected — check database and API key")
         return {"error": "No evaluation data"}
 
-    dataset = Dataset.from_list([
-        {
-            "question": r["question"],
-            "answer": r["answer"],
-            "contexts": r["contexts"],
-            "ground_truth": r["ground_truth"],
-        }
-        for r in eval_data
-    ])
+    dataset = Dataset.from_list(
+        [
+            {
+                "question": r["question"],
+                "answer": r["answer"],
+                "contexts": r["contexts"],
+                "ground_truth": r["ground_truth"],
+            }
+            for r in eval_data
+        ]
+    )
 
     # Run RAGAS
     scores = evaluate(
@@ -181,12 +183,12 @@ def main() -> None:
     )
 
     faithfulness_score = results.get("faithfulness", 0.0)
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("RAGAS Evaluation Results")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     for k, v in results.items():
         print(f"  {k}: {v:.4f}" if isinstance(v, float) else f"  {k}: {v}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     print(f"Faithfulness: {faithfulness_score:.4f} (threshold: {args.threshold})")
 
     if args.fail_on_threshold and faithfulness_score < args.threshold:

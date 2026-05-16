@@ -35,9 +35,18 @@ SM3_PER_MSCF = 35.315  # 1000 scf per Sm³ of gas
 
 # Volve daily sheet columns we use
 VOLVE_COLS = [
-    "DATEPRD", "NPD_WELL_BORE_NAME", "NPD_FIELD_NAME", "FLOW_KIND",
-    "ON_STREAM_HRS", "BORE_OIL_VOL", "BORE_WAT_VOL", "BORE_GAS_VOL",
-    "AVG_DOWNHOLE_PRESSURE", "AVG_WHP_P", "AVG_WHT_P", "AVG_CHOKE_SIZE_P",
+    "DATEPRD",
+    "NPD_WELL_BORE_NAME",
+    "NPD_FIELD_NAME",
+    "FLOW_KIND",
+    "ON_STREAM_HRS",
+    "BORE_OIL_VOL",
+    "BORE_WAT_VOL",
+    "BORE_GAS_VOL",
+    "AVG_DOWNHOLE_PRESSURE",
+    "AVG_WHP_P",
+    "AVG_WHT_P",
+    "AVG_CHOKE_SIZE_P",
 ]
 
 # Only these wells are oil producers in Volve
@@ -76,8 +85,15 @@ def load_volve_daily(
     raw = raw[raw["ON_STREAM_HRS"] >= min_on_stream_hrs]
 
     # Numeric coercion
-    for col in ["BORE_OIL_VOL", "BORE_WAT_VOL", "BORE_GAS_VOL",
-                "AVG_DOWNHOLE_PRESSURE", "AVG_WHP_P", "AVG_WHT_P", "AVG_CHOKE_SIZE_P"]:
+    for col in [
+        "BORE_OIL_VOL",
+        "BORE_WAT_VOL",
+        "BORE_GAS_VOL",
+        "AVG_DOWNHOLE_PRESSURE",
+        "AVG_WHP_P",
+        "AVG_WHT_P",
+        "AVG_CHOKE_SIZE_P",
+    ]:
         raw[col] = pd.to_numeric(raw[col], errors="coerce").fillna(0.0).clip(lower=0)
 
     df = pd.DataFrame()

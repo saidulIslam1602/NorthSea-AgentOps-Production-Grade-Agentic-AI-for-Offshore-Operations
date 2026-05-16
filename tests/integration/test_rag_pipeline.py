@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-from pathlib import Path
 
 import pytest
 
@@ -21,6 +20,7 @@ def event_loop():
 async def db_conn():
     """Create a test database connection."""
     import psycopg
+
     from src.config import get_settings
 
     settings = get_settings()

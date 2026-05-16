@@ -3,28 +3,32 @@
 from __future__ import annotations
 
 import enum
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
 
 
-class SeverityLevel(str, enum.Enum):
+def _utc_now() -> datetime:
+    return datetime.now(UTC)
+
+
+class SeverityLevel(enum.StrEnum):
     LOW = "LOW"
     MEDIUM = "MEDIUM"
     HIGH = "HIGH"
     CRITICAL = "CRITICAL"
 
 
-class RiskLevel(str, enum.Enum):
+class RiskLevel(enum.StrEnum):
     LOW = "LOW"
     MEDIUM = "MEDIUM"
     HIGH = "HIGH"
     CRITICAL = "CRITICAL"
 
 
-class EscalationReason(str, enum.Enum):
+class EscalationReason(enum.StrEnum):
     LOW_CONFIDENCE = "LOW_CONFIDENCE"
     LOW_EVIDENCE_COVERAGE = "LOW_EVIDENCE_COVERAGE"
     HIGH_HSE_RISK = "HIGH_HSE_RISK"
@@ -34,6 +38,7 @@ class EscalationReason(str, enum.Enum):
 
 
 # ─── Telemetry ────────────────────────────────────────────────────────────────
+
 
 class WellTelemetry(BaseModel):
     """Single time-series reading from a well instrument."""
@@ -70,6 +75,7 @@ class AnomalyAlert(BaseModel):
 
 # ─── Investigation ────────────────────────────────────────────────────────────
 
+
 class Citation(BaseModel):
     """Document citation from RAG retrieval."""
 
@@ -98,7 +104,7 @@ class InvestigationResult(BaseModel):
 
     investigation_id: UUID = Field(default_factory=uuid4)
     alert: AnomalyAlert
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=_utc_now)
 
     # Agent outputs
     root_cause_hypothesis: str
@@ -124,13 +130,14 @@ class InvestigationResult(BaseModel):
 
 # ─── Escalation ───────────────────────────────────────────────────────────────
 
+
 class EscalationRecord(BaseModel):
     """Human escalation record stored in the queue."""
 
     escalation_id: UUID = Field(default_factory=uuid4)
     investigation_id: UUID
     well_id: str
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=_utc_now)
     resolved_at: datetime | None = None
     resolved_by: str | None = None
     resolution_notes: str | None = None

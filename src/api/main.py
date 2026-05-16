@@ -15,19 +15,18 @@ Routes:
 
 from __future__ import annotations
 
-import logging
 import time
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
 
 import psycopg
 import structlog
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from prometheus_fastapi_instrumentator import Instrumentator
 
-from src.api.routes import investigations, rag, telemetry, escalations
+from src.api.routes import escalations, investigations, rag, telemetry
 from src.config import get_settings
 from src.observability.telemetry import setup_telemetry
 
@@ -36,8 +35,9 @@ settings = get_settings()
 
 # ─── Lifespan ─────────────────────────────────────────────────────────────────
 
+
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Startup and shutdown lifecycle."""
     # Setup OpenTelemetry
     setup_telemetry(app)
@@ -118,6 +118,7 @@ app.include_router(escalations.router, prefix="/api/v1", tags=["Escalations"])
 
 # ─── Health Check ─────────────────────────────────────────────────────────────
 
+
 @app.get("/health", tags=["System"])
 async def health_check() -> dict[str, Any]:
     db_url = settings.database_url.replace("+psycopg", "")
@@ -127,8 +128,8 @@ async def health_check() -> dict[str, Any]:
             async with conn.cursor() as cur:
                 await cur.execute("SELECT 1")
         db_ok = True
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("health_db_check_failed", error=str(exc))
 
     return {
         "status": "healthy" if db_ok else "degraded",

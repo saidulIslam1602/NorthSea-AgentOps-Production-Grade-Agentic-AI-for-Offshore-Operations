@@ -19,7 +19,6 @@ from typing import Any
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
-from src.agents.state import AgentState
 from src.config import get_settings
 from src.schemas.domain import AnomalyAlert
 
@@ -34,7 +33,7 @@ AVAILABLE_TOOLS = [
     "get_equipment_status",
 ]
 
-PLANNER_SYSTEM_PROMPT = """You are a senior production engineer AI assistant specialising in \
+PLANNER_SYSTEM_PROMPT = f"""You are a senior production engineer AI assistant specialising in \
 North Sea oil and gas operations. Your role is to create structured investigation plans \
 for production anomalies.
 
@@ -42,7 +41,7 @@ When given an anomaly alert, produce a JSON investigation plan with 3-5 steps.
 Each step must specify:
 - step_id: integer (1-based)
 - description: clear description of what to investigate
-- tool_to_use: one of {tools}
+- tool_to_use: one of {AVAILABLE_TOOLS}
 - expected_output: what information we expect to find
 
 IMPORTANT RULES:
@@ -53,7 +52,7 @@ IMPORTANT RULES:
 5. Consider HSE implications for HIGH and CRITICAL severity anomalies.
 
 Return ONLY a JSON object with key "steps" containing the list of step objects.
-Do not include any explanation outside the JSON.""".format(tools=AVAILABLE_TOOLS)
+Do not include any explanation outside the JSON."""
 
 
 def _build_planner_prompt(alert: AnomalyAlert) -> str:
@@ -62,7 +61,7 @@ Well: {alert.well_id}
 Field: {alert.field_name}
 Severity: {alert.severity.value}
 Anomaly Score: {alert.anomaly_score:.3f}
-Affected Features: {', '.join(alert.affected_features)}
+Affected Features: {", ".join(alert.affected_features)}
 Current Values: {json.dumps(alert.current_values, indent=2)}
 Baseline Values: {json.dumps(alert.baseline_values, indent=2)}
 Deviations: {json.dumps(alert.deviation_pct, indent=2)}
@@ -105,27 +104,28 @@ async def run_planner(state: dict[str, Any]) -> dict[str, Any]:
         # Validate each step has required fields
         validated_steps = []
         for i, step in enumerate(plan_steps):
-            validated_steps.append({
-                "step_id": step.get("step_id", i + 1),
-                "description": step.get("description", f"Step {i + 1}"),
-                "tool_to_use": step.get("tool_to_use", "query_timeseries"),
-                "expected_output": step.get("expected_output", ""),
-                "completed": False,
-                "result": None,
-            })
+            validated_steps.append(
+                {
+                    "step_id": step.get("step_id", i + 1),
+                    "description": step.get("description", f"Step {i + 1}"),
+                    "tool_to_use": step.get("tool_to_use", "query_timeseries"),
+                    "expected_output": step.get("expected_output", ""),
+                    "completed": False,
+                    "result": None,
+                }
+            )
 
         tokens = response.usage_metadata.get("total_tokens", 0) if response.usage_metadata else 0
 
-        step_record.update({
-            "output": f"Generated {len(validated_steps)} investigation steps",
-            "tokens": tokens,
-            "success": True,
-        })
-
-        logger.info(
-            "Planner created %d steps for %s [%s]",
-            len(validated_steps), alert.well_id, alert.severity.value
+        step_record.update(
+            {
+                "output": f"Generated {len(validated_steps)} investigation steps",
+                "tokens": tokens,
+                "success": True,
+            }
         )
+
+        logger.info("Planner created %d steps for %s [%s]", len(validated_steps), alert.well_id, alert.severity.value)
 
         return {
             "plan_steps": validated_steps,
@@ -178,13 +178,15 @@ def _fallback_plan(alert: AnomalyAlert) -> list[dict[str, Any]]:
     ]
 
     if alert.severity.value in ("HIGH", "CRITICAL"):
-        steps.append({
-            "step_id": 4,
-            "description": "Retrieve HSE procedures relevant to this type of anomaly",
-            "tool_to_use": "retrieve_documents",
-            "expected_output": "Safety response requirements and escalation thresholds",
-            "completed": False,
-            "result": None,
-        })
+        steps.append(
+            {
+                "step_id": 4,
+                "description": "Retrieve HSE procedures relevant to this type of anomaly",
+                "tool_to_use": "retrieve_documents",
+                "expected_output": "Safety response requirements and escalation thresholds",
+                "completed": False,
+                "result": None,
+            }
+        )
 
     return steps

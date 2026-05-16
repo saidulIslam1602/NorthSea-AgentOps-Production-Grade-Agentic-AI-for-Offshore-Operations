@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
-from uuid import UUID
 
 import psycopg
 import psycopg.rows
-from fastapi import APIRouter, BackgroundTasks, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
 from src.agents.orchestrator import investigate_anomaly
@@ -24,6 +23,7 @@ settings = get_settings()
 
 class TriggerInvestigationRequest(BaseModel):
     """Request body for manually triggering an investigation."""
+
     well_id: str
     field_name: str
     severity: SeverityLevel = SeverityLevel.MEDIUM
@@ -38,6 +38,7 @@ class TriggerInvestigationRequest(BaseModel):
 
 class InvestigationResponse(BaseModel):
     """API response for an investigation result."""
+
     investigation_id: str | None
     well_id: str
     severity: str
@@ -77,7 +78,7 @@ async def trigger_investigation(
         )
 
     alert = AnomalyAlert(
-        timestamp=datetime.utcnow(),
+        timestamp=datetime.now(UTC),
         well_id=request.well_id,
         field_name=request.field_name,
         severity=request.severity,

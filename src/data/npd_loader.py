@@ -112,7 +112,7 @@ KNOWN_FIELDS: dict[str, dict[str, Any]] = {
         "on_stream": 2008,
         "shut_in": 2016,
         "description": "Volve oil field, Sleipner area, Southern Norwegian North Sea. "
-                        "Total production ~63 million barrels. Equinor open dataset.",
+        "Total production ~63 million barrels. Equinor open dataset.",
         "typical_wells": ["15/9-F-1C", "15/9-F-4", "15/9-F-5", "15/9-F-11H", "15/9-F-12H"],
     },
     "Draugen": {
@@ -122,9 +122,17 @@ KNOWN_FIELDS: dict[str, dict[str, Any]] = {
         "on_stream": 1993,
         "shut_in": None,
         "description": "Draugen oil field, Haltenbanken area, Norwegian Sea. "
-                        "Total production >350 million barrels. Operated by Okea (prev. Shell).",
-        "typical_wells": ["6407/9-A-1H", "6407/9-A-3H", "6407/9-A-6", "6407/9-B-1H",
-                          "6407/9-D-1H", "6407/9-D-2H", "6407/9-D-3H", "6407/9-D-4AH"],
+        "Total production >350 million barrels. Operated by Okea (prev. Shell).",
+        "typical_wells": [
+            "6407/9-A-1H",
+            "6407/9-A-3H",
+            "6407/9-A-6",
+            "6407/9-B-1H",
+            "6407/9-D-1H",
+            "6407/9-D-2H",
+            "6407/9-D-3H",
+            "6407/9-D-4AH",
+        ],
     },
     "Gullfaks": {
         "npdid": 43718,
@@ -133,9 +141,8 @@ KNOWN_FIELDS: dict[str, dict[str, Any]] = {
         "on_stream": 1986,
         "shut_in": None,
         "description": "Gullfaks oil field, Northern North Sea. One of Norway's largest. "
-                        "Total production ~2.7 billion barrels. Three platforms: A, B, C.",
-        "typical_wells": ["34/10-A-2H", "34/10-A-5", "34/10-B-1H", "34/10-C-1H",
-                          "34/10-GF-A-2H", "34/10-GF-B-1H"],
+        "Total production ~2.7 billion barrels. Three platforms: A, B, C.",
+        "typical_wells": ["34/10-A-2H", "34/10-A-5", "34/10-B-1H", "34/10-C-1H", "34/10-GF-A-2H", "34/10-GF-B-1H"],
     },
     "Oseberg": {
         "npdid": 43756,
@@ -144,7 +151,7 @@ KNOWN_FIELDS: dict[str, dict[str, Any]] = {
         "on_stream": 1988,
         "shut_in": None,
         "description": "Oseberg oil field, Northern North Sea. Multiple satellite fields. "
-                        "Total production ~1.9 billion barrels.",
+        "Total production ~1.9 billion barrels.",
         "typical_wells": ["30/6-OS-1H", "30/6-OS-2H", "30/6-OS-3H", "30/6-OS-4H"],
     },
 }
@@ -167,7 +174,7 @@ def _download_csv(url: str, timeout: int = 60, retries: int = 3) -> pd.DataFrame
         except Exception as exc:
             logger.warning("Download failed attempt %d: %s", attempt, exc)
             if attempt < retries:
-                time.sleep(2 ** attempt)
+                time.sleep(2**attempt)
     return None
 
 
@@ -232,32 +239,27 @@ def fetch_field_production_monthly(
 
     # Oil rate: million Sm3 → BOPD
     if "oil_net_mill_sm3" in df.columns:
-        df["oil_bopd"] = (
-            df["oil_net_mill_sm3"] * 1_000_000 * SM3_PER_BBL / df["days_in_month"]
-        ).round(0)
+        df["oil_bopd"] = (df["oil_net_mill_sm3"] * 1_000_000 * SM3_PER_BBL / df["days_in_month"]).round(0)
 
     # Produced water → BWPD
     if "produced_water_mill_sm3" in df.columns:
-        df["water_bwpd"] = (
-            df["produced_water_mill_sm3"] * 1_000_000 * SM3_PER_BBL / df["days_in_month"]
-        ).round(0)
+        df["water_bwpd"] = (df["produced_water_mill_sm3"] * 1_000_000 * SM3_PER_BBL / df["days_in_month"]).round(0)
         total_liquid = df["oil_bopd"] + df["water_bwpd"]
-        df["water_cut_pct"] = (
-            df["water_bwpd"] / total_liquid.replace(0, float("nan")) * 100
-        ).fillna(0.0).round(1)
+        df["water_cut_pct"] = (df["water_bwpd"] / total_liquid.replace(0, float("nan")) * 100).fillna(0.0).round(1)
 
     # GOR: (gas Bscf/month × 10^9 scf) / (oil bbl/month) → scf/bbl
     if "gas_net_bill_sm3" in df.columns and "oil_net_mill_sm3" in df.columns:
         # 1 billion Sm3 gas ≈ 35.315 billion scf (1 Sm3 = 35.315 scf)
         gas_scf = df["gas_net_bill_sm3"] * 1e9 * 35.315
         oil_bbl = df["oil_net_mill_sm3"] * 1e6 * SM3_PER_BBL
-        df["gor_scf_bbl"] = (
-            gas_scf / oil_bbl.replace(0, float("nan"))
-        ).fillna(0.0).round(0)
+        df["gor_scf_bbl"] = (gas_scf / oil_bbl.replace(0, float("nan"))).fillna(0.0).round(0)
 
     logger.info(
         "Fetched Sodir production data: %d rows, fields=%s, years=%d-%d",
-        len(df), df["field_name"].unique().tolist(), start_year, end_year,
+        len(df),
+        df["field_name"].unique().tolist(),
+        start_year,
+        end_year,
     )
     return df.sort_values(["field_name", "year", "month"]).reset_index(drop=True)
 
@@ -286,9 +288,7 @@ def compute_field_statistics(df: pd.DataFrame) -> dict[str, dict[str, Any]]:
             peak_year = 0
 
         avg_water_cut = float(group["water_cut_pct"].mean()) if "water_cut_pct" in group.columns else 0.0
-        late_water_cut = float(
-            group.tail(24)["water_cut_pct"].mean()
-        ) if "water_cut_pct" in group.columns else 0.0
+        late_water_cut = float(group.tail(24)["water_cut_pct"].mean()) if "water_cut_pct" in group.columns else 0.0
 
         avg_gor = float(group["gor_scf_bbl"].mean()) if "gor_scf_bbl" in group.columns else 0.0
 
@@ -314,9 +314,7 @@ def save_to_cache(df: pd.DataFrame, stats: dict[str, Any], cache_dir: Path) -> N
     """Cache downloaded data locally to avoid re-downloading on every run."""
     cache_dir.mkdir(parents=True, exist_ok=True)
     df.to_csv(cache_dir / "npd_field_production_monthly.csv", index=False)
-    (cache_dir / "npd_field_statistics.json").write_text(
-        json.dumps(stats, indent=2, default=str)
-    )
+    (cache_dir / "npd_field_statistics.json").write_text(json.dumps(stats, indent=2, default=str))
     logger.info("Cached Sodir data to %s", cache_dir)
 
 
@@ -384,8 +382,7 @@ def build_anomaly_context_from_real_data(
     cutoff_year = year if month > 12 else year - 1
     cutoff_month = month - 12 if month > 12 else month
     baseline = field_df[
-        (field_df["year"] > cutoff_year) |
-        ((field_df["year"] == cutoff_year) & (field_df["month"] >= cutoff_month))
+        (field_df["year"] > cutoff_year) | ((field_df["year"] == cutoff_year) & (field_df["month"] >= cutoff_month))
     ]
 
     context: dict[str, Any] = {
@@ -422,7 +419,7 @@ def build_anomaly_context_from_real_data(
 KNOWN_REAL_STATISTICS: dict[str, dict[str, Any]] = {
     "Volve": {
         "total_oil_thousand_bbl": 63_000,  # ~63 million barrels total
-        "peak_oil_bopd": 56_200,           # peak in 2010
+        "peak_oil_bopd": 56_200,  # peak in 2010
         "peak_year": 2010,
         "avg_water_cut_pct": 42.0,
         "late_field_water_cut_pct": 81.0,  # end of field life (2015-2016)
@@ -437,10 +434,10 @@ KNOWN_REAL_STATISTICS: dict[str, dict[str, Any]] = {
     },
     "Draugen": {
         "total_oil_thousand_bbl": 354_000,  # ~354 million barrels as of 2023
-        "peak_oil_bopd": 200_000,           # early 1990s peak
+        "peak_oil_bopd": 200_000,  # early 1990s peak
         "peak_year": 1995,
         "avg_water_cut_pct": 63.0,
-        "late_field_water_cut_pct": 74.0,   # 2022-2023 average
+        "late_field_water_cut_pct": 74.0,  # 2022-2023 average
         "avg_gor_scf_bbl": 520,
         "production_years": "1993-present",
         "operator": "Okea (prev. Shell/A.P. Møller)",
@@ -452,7 +449,7 @@ KNOWN_REAL_STATISTICS: dict[str, dict[str, Any]] = {
     },
     "Gullfaks": {
         "total_oil_thousand_bbl": 2_700_000,  # ~2.7 billion barrels
-        "peak_oil_bopd": 600_000,              # 1994 plateau
+        "peak_oil_bopd": 600_000,  # 1994 plateau
         "peak_year": 1994,
         "avg_water_cut_pct": 78.0,
         "late_field_water_cut_pct": 90.0,
@@ -467,7 +464,7 @@ KNOWN_REAL_STATISTICS: dict[str, dict[str, Any]] = {
     },
     "Oseberg": {
         "total_oil_thousand_bbl": 1_900_000,  # ~1.9 billion barrels
-        "peak_oil_bopd": 570_000,              # 1991 plateau
+        "peak_oil_bopd": 570_000,  # 1991 plateau
         "peak_year": 1991,
         "avg_water_cut_pct": 65.0,
         "late_field_water_cut_pct": 85.0,
@@ -505,8 +502,5 @@ if __name__ == "__main__":
 
     if result:
         df, stats = result
-        print(f"\nDownloaded {len(df)} rows of real production data.")
-        print(json.dumps(stats, indent=2, default=str))
     else:
-        print("Download failed — check logs. Using fallback statistics:")
-        print(json.dumps(KNOWN_REAL_STATISTICS, indent=2))
+        pass

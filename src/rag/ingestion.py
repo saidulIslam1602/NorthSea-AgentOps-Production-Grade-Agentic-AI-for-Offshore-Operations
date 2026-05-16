@@ -31,6 +31,7 @@ DOC_TYPE_MAP: dict[str, str] = {
 
 # ─── Chunking ─────────────────────────────────────────────────────────────────
 
+
 def _extract_title(text: str, fallback: str) -> str:
     """Extract the first H1 or H2 heading from Markdown."""
     for line in text.splitlines():
@@ -77,11 +78,13 @@ def _chunk_text(
     while start < len(words):
         end = min(start + chunk_size, len(words))
         chunk_words = words[start:end]
-        chunks.append({
-            "content": " ".join(chunk_words),
-            "section": section,
-            "token_count": len(chunk_words),
-        })
+        chunks.append(
+            {
+                "content": " ".join(chunk_words),
+                "section": section,
+                "token_count": len(chunk_words),
+            }
+        )
         if end == len(words):
             break
         start += chunk_size - chunk_overlap
@@ -115,6 +118,7 @@ def chunk_document(
 
 
 # ─── Ingestion ────────────────────────────────────────────────────────────────
+
 
 def _detect_doc_type(path: Path) -> str:
     for dir_name, doc_type in DOC_TYPE_MAP.items():
@@ -224,9 +228,8 @@ def main() -> None:
     results = asyncio.run(
         ingest_corpus(Path(args.docs_dir), chunk_size=args.chunk_size, chunk_overlap=args.chunk_overlap)
     )
-    total_chunks = sum(v for v in results.values() if v >= 0)
-    failed = sum(1 for v in results.values() if v < 0)
-    print(f"\nIngestion complete: {len(results)} docs, {total_chunks} chunks, {failed} failures")
+    sum(v for v in results.values() if v >= 0)
+    sum(1 for v in results.values() if v < 0)
 
 
 if __name__ == "__main__":

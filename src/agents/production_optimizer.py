@@ -32,41 +32,39 @@ Three core functions:
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta
-from enum import Enum
-from typing import Optional
-
-import numpy as np
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
+from enum import StrEnum
 
 logger = logging.getLogger(__name__)
 
 # ── Economic constants (Norwegian North Sea, 2024-2026 estimates) ────────────
 BRENT_USD_PER_BBL: float = 80.0
-WATER_OPEX_USD_PER_BBL: float = 4.50      # offshore water handling cost
+WATER_OPEX_USD_PER_BBL: float = 4.50  # offshore water handling cost
 GAS_PRICE_USD_PER_MSCF: float = 8.00
-ESP_WORKOVER_USD: float = 3_500_000.0     # typical NCS ESP workover cost
-ESP_WORKOVER_DAYS: float = 21.0           # rig days for ESP replacement
-PLANNED_VS_UNPLANNED_RATIO: float = 4.0   # unplanned costs 4× planned
+ESP_WORKOVER_USD: float = 3_500_000.0  # typical NCS ESP workover cost
+ESP_WORKOVER_DAYS: float = 21.0  # rig days for ESP replacement
+PLANNED_VS_UNPLANNED_RATIO: float = 4.0  # unplanned costs 4× planned
 
 
-class InterventionUrgency(str, Enum):
-    IMMEDIATE    = "IMMEDIATE"       # < 24 hours — stop production risk
-    URGENT       = "URGENT"          # < 7 days  — escalate to subsurface team
-    PLANNED      = "PLANNED"         # < 30 days — schedule next well visit
-    MONITOR      = "MONITOR"         # watchlist — increase monitoring frequency
+class InterventionUrgency(StrEnum):
+    IMMEDIATE = "IMMEDIATE"  # < 24 hours — stop production risk
+    URGENT = "URGENT"  # < 7 days  — escalate to subsurface team
+    PLANNED = "PLANNED"  # < 30 days — schedule next well visit
+    MONITOR = "MONITOR"  # watchlist — increase monitoring frequency
 
 
 @dataclass
 class ProductionLoss:
     """Quantified production impact of a detected anomaly."""
+
     daily_oil_loss_bopd: float
     daily_revenue_usd: float
     daily_water_cost_uplift_usd: float
     total_daily_impact_usd: float
     cumulative_30day_usd: float
     cumulative_90day_usd: float
-    basis: str   # explanation of calculation
+    basis: str  # explanation of calculation
 
     @property
     def annualised_usd(self) -> float:
@@ -82,46 +80,50 @@ class ESPRemainingUsefulLife:
     motor temperature excursion frequency.
     Reference: Takacs (2018) §6.4 — Motor degradation under thermal cycling.
     """
+
     estimated_rul_days: int
-    confidence: str           # HIGH / MEDIUM / LOW
+    confidence: str  # HIGH / MEDIUM / LOW
     degradation_rate_pct_per_day: float
     key_indicators: list[str]
-    intervention_deadline: str   # ISO date string
+    intervention_deadline: str  # ISO date string
 
 
 @dataclass
 class InterventionRecommendation:
     """Prioritised engineering action from anomaly context."""
+
     urgency: InterventionUrgency
     primary_action: str
     secondary_actions: list[str]
     estimated_cost_usd: float
     estimated_benefit_usd_per_day: float
-    roi_days: float            # days to break even
+    roi_days: float  # days to break even
     supporting_evidence: list[str]
-    confidence: float          # 0-1
+    confidence: float  # 0-1
 
 
 @dataclass
 class ProductionOptimizerResult:
     """Full business impact assessment from one anomaly alert."""
+
     well_id: str
     anomaly_type: str
     assessed_at: str
     production_loss: ProductionLoss
-    esp_rul: Optional[ESPRemainingUsefulLife]
+    esp_rul: ESPRemainingUsefulLife | None
     recommendation: InterventionRecommendation
-    causal_chain: list[str]          # ordered root-cause hypothesis
+    causal_chain: list[str]  # ordered root-cause hypothesis
     comparable_incidents: list[str]  # historical analogues from Volve data
 
 
 # ── Core estimation functions ─────────────────────────────────────────────────
 
+
 def estimate_production_loss(
     anomaly_type: str,
     current_values: dict[str, float],
     baseline_values: dict[str, float],
-    well_id: str,
+    _well_id: str,
 ) -> ProductionLoss:
     """
     Quantify daily production impact from measured deviations.
@@ -133,7 +135,7 @@ def estimate_production_loss(
     oil_base = baseline_values.get("oil_rate_bopd", 0)
     oil_loss = max(0.0, oil_base - oil_now)
 
-    wc_now  = current_values.get("water_cut_pct", 0)
+    wc_now = current_values.get("water_cut_pct", 0)
     wc_base = baseline_values.get("water_cut_pct", 0)
     wc_delta = max(0.0, wc_now - wc_base)
 
@@ -158,10 +160,7 @@ def estimate_production_loss(
             f"(${oil_base:.0f} BOPD × ${BRENT_USD_PER_BBL:.0f}/bbl × 15% OPEX uplift)"
         )
     else:
-        basis = (
-            f"Oil rate decline: {oil_loss:.0f} BOPD × ${BRENT_USD_PER_BBL:.0f}/bbl = "
-            f"${daily_oil_rev:,.0f}/day"
-        )
+        basis = f"Oil rate decline: {oil_loss:.0f} BOPD × ${BRENT_USD_PER_BBL:.0f}/bbl = ${daily_oil_rev:,.0f}/day"
         if water_excess_bbl > 0:
             basis += (
                 f"; water handling uplift: {water_excess_bbl:.0f} bbl/day × "
@@ -183,7 +182,7 @@ def estimate_esp_rul(
     current_values: dict[str, float],
     baseline_values: dict[str, float],
     consecutive_anomaly_days: int,
-) -> Optional[ESPRemainingUsefulLife]:
+) -> ESPRemainingUsefulLife | None:
     """
     Estimate ESP remaining useful life from motor/pump condition indicators.
 
@@ -193,16 +192,19 @@ def estimate_esp_rul(
     Only relevant for bhp_depletion and oil_rate_collapse anomaly types.
     Returns None if indicators are insufficient.
     """
-    bhp_now  = current_values.get("bhp_psi", 0)
+    bhp_now = current_values.get("bhp_psi", 0)
     bhp_base = baseline_values.get("bhp_psi", bhp_now)
 
     if bhp_base < 100:
         return None
 
     bhp_decline_pct = max(0.0, (bhp_base - bhp_now) / bhp_base * 100)
-    oil_decline_pct = max(0.0, (
-        baseline_values.get("oil_rate_bopd", 0) - current_values.get("oil_rate_bopd", 0)
-    ) / max(1, baseline_values.get("oil_rate_bopd", 1)) * 100)
+    oil_decline_pct = max(
+        0.0,
+        (baseline_values.get("oil_rate_bopd", 0) - current_values.get("oil_rate_bopd", 0))
+        / max(1, baseline_values.get("oil_rate_bopd", 1))
+        * 100,
+    )
 
     if bhp_decline_pct < 5 and oil_decline_pct < 10:
         return None  # Not likely an ESP issue
@@ -215,10 +217,10 @@ def estimate_esp_rul(
     failure_threshold = 35.0
     remaining_margin = max(0, failure_threshold - degradation_pct)
     rul_days = int(remaining_margin / max(0.1, rate_per_day))
-    rul_days = min(rul_days, 365)   # cap at 1 year
+    rul_days = min(rul_days, 365)  # cap at 1 year
 
     confidence = "HIGH" if consecutive_anomaly_days >= 7 else ("MEDIUM" if consecutive_anomaly_days >= 3 else "LOW")
-    deadline = (datetime.utcnow() + timedelta(days=rul_days)).strftime("%Y-%m-%d")
+    deadline = (datetime.now(UTC) + timedelta(days=rul_days)).strftime("%Y-%m-%d")
 
     indicators = []
     if bhp_decline_pct > 5:
@@ -240,7 +242,7 @@ def build_causal_chain(
     anomaly_type: str,
     current_values: dict[str, float],
     baseline_values: dict[str, float],
-    well_id: str,
+    _well_id: str,
 ) -> list[str]:
     """
     Build an ordered causal hypothesis chain for the anomaly.
@@ -251,32 +253,40 @@ def build_causal_chain(
     chains: dict[str, list[str]] = {
         "water_breakthrough": [
             f"1. CAUSE: High water influx from aquifer or injection breakthrough "
-            f"(water_cut {baseline_values.get('water_cut_pct',0):.0f}% → "
-            f"{current_values.get('water_cut_pct',0):.0f}%)",
+            f"(water_cut {baseline_values.get('water_cut_pct', 0):.0f}% → "
+            f"{current_values.get('water_cut_pct', 0):.0f}%)",
             "2. MECHANISM: Preferential flow path established via high-permeability zone or fracture",
             "3. EFFECT: Increased surface water handling load → potential separator overload",
             "4. SECONDARY: Reduced relative permeability to oil → oil rate decline expected within 3-7 days",
             "5. ACTION: Log injection-production correlation to confirm WI-producer communication",
         ],
         "gor_spike": [
-            f"1. CAUSE: Gas coning from gas cap, or separator gas breakthrough",
-            f"   GOR {baseline_values.get('gas_oil_ratio',0):.0f} → {current_values.get('gas_oil_ratio',0):.0f} scf/bbl",
+            "1. CAUSE: Gas coning from gas cap, or separator gas breakthrough",
+            (
+                "   GOR "
+                f"{baseline_values.get('gas_oil_ratio', 0):.0f} → "
+                f"{current_values.get('gas_oil_ratio', 0):.0f} scf/bbl"
+            ),
             "2. MECHANISM: Vertical gas cone or horizontal gas channel activation",
             "3. EFFECT: Liquid loading risk if GOR exceeds lift capability",
             "4. SECONDARY: Compressor overload possible if sustained — check topside gas handling",
             "5. ACTION: Compare with offset well GOR trend; review choke setting for coning mitigation",
         ],
         "bhp_depletion": [
-            f"1. CAUSE: Reservoir pressure decline or ESP motor degradation",
-            f"   BHP {baseline_values.get('bhp_psi',0):.0f} → {current_values.get('bhp_psi',0):.0f} psi",
+            "1. CAUSE: Reservoir pressure decline or ESP motor degradation",
+            f"   BHP {baseline_values.get('bhp_psi', 0):.0f} → {current_values.get('bhp_psi', 0):.0f} psi",
             "2. MECHANISM A (reservoir): Depletion without adequate pressure support — check voidage ratio",
             "3. MECHANISM B (equipment): ESP motor wear → reduced pump efficiency → lower BHP",
             "4. EFFECT: Reduced productivity index → oil rate decline",
             "5. ACTION: Run PI test to distinguish reservoir vs. equipment root cause",
         ],
         "oil_rate_collapse": [
-            f"1. CAUSE: Sudden production stoppage — choke, ESP trip, or surface equipment failure",
-            f"   Oil rate {baseline_values.get('oil_rate_bopd',0):.0f} → {current_values.get('oil_rate_bopd',0):.0f} BOPD",
+            "1. CAUSE: Sudden production stoppage — choke, ESP trip, or surface equipment failure",
+            (
+                "   Oil rate "
+                f"{baseline_values.get('oil_rate_bopd', 0):.0f} → "
+                f"{current_values.get('oil_rate_bopd', 0):.0f} BOPD"
+            ),
             "2. MECHANISM: Check choke setting, ESP ampere draw, and flowline pressure",
             "3. EFFECT: Immediate revenue loss + well integrity risk if shut-in prolonged",
             "4. SECONDARY: Potential sand/scale deposition during low-flow period",
@@ -295,46 +305,65 @@ def build_causal_chain(
 def build_intervention_recommendation(
     anomaly_type: str,
     production_loss: ProductionLoss,
-    esp_rul: Optional[ESPRemainingUsefulLife],
+    esp_rul: ESPRemainingUsefulLife | None,
     consecutive_days: int,
 ) -> InterventionRecommendation:
     """Map anomaly type and severity to engineering intervention actions."""
 
     urgency_map: dict[str, InterventionUrgency] = {
-        "oil_rate_collapse":   InterventionUrgency.IMMEDIATE,
-        "bhp_depletion":       InterventionUrgency.URGENT if (esp_rul and esp_rul.estimated_rul_days < 30) else InterventionUrgency.PLANNED,
-        "water_breakthrough":  InterventionUrgency.URGENT,
-        "gor_spike":           InterventionUrgency.PLANNED,
-        "thermal_excursion":   InterventionUrgency.URGENT,
+        "oil_rate_collapse": InterventionUrgency.IMMEDIATE,
+        "bhp_depletion": InterventionUrgency.URGENT
+        if (esp_rul and esp_rul.estimated_rul_days < 30)
+        else InterventionUrgency.PLANNED,
+        "water_breakthrough": InterventionUrgency.URGENT,
+        "gor_spike": InterventionUrgency.PLANNED,
+        "thermal_excursion": InterventionUrgency.URGENT,
         "multi_feature_correlated": InterventionUrgency.URGENT,
     }
 
     action_map: dict[str, tuple[str, list[str]]] = {
         "oil_rate_collapse": (
             "Verify ESP status and initiate restart protocol per NORSOK D-010",
-            ["Check ESP ampere draw for motor condition", "Inspect flowline for hydrate plugging",
-             "Review choke position — verify not inadvertently closed", "Notify production foreman immediately"],
+            [
+                "Check ESP ampere draw for motor condition",
+                "Inspect flowline for hydrate plugging",
+                "Review choke position — verify not inadvertently closed",
+                "Notify production foreman immediately",
+            ],
         ),
         "bhp_depletion": (
             "Conduct productivity index (PI) test to distinguish reservoir vs. equipment degradation",
-            ["Review ESP operating point vs. pump curve", "Check vibration sensors if available",
-             "Evaluate polymer/scale inhibitor squeeze timing", "Plan ESP workover if RUL < 30 days"],
+            [
+                "Review ESP operating point vs. pump curve",
+                "Check vibration sensors if available",
+                "Evaluate polymer/scale inhibitor squeeze timing",
+                "Plan ESP workover if RUL < 30 days",
+            ],
         ),
         "water_breakthrough": (
             "Investigate water source via injection-production correlation",
-            ["Pull tracer logs to identify breakthrough interval", "Evaluate conformance treatment (polymer flood)",
-             "Review water injection rates on connected injectors",
-             "Assess surface water handling capacity vs. forecast WOR"],
+            [
+                "Pull tracer logs to identify breakthrough interval",
+                "Evaluate conformance treatment (polymer flood)",
+                "Review water injection rates on connected injectors",
+                "Assess surface water handling capacity vs. forecast WOR",
+            ],
         ),
         "gor_spike": (
             "Adjust choke setting to reduce drawdown and mitigate gas coning",
-            ["Check separator gas outlet for capacity constraints",
-             "Review gas lift mandate if applicable", "Model optimum drawdown with reservoir team"],
+            [
+                "Check separator gas outlet for capacity constraints",
+                "Review gas lift mandate if applicable",
+                "Model optimum drawdown with reservoir team",
+            ],
         ),
         "multi_feature_correlated": (
             "Dispatch field engineer for physical inspection and sensor verification",
-            ["Verify flow meter calibration", "Check control valve positioners",
-             "Run well test to establish current PI"],
+            [
+                "Verify flow meter calibration",
+                "Check control valve positioners",
+                "Run well test to establish current PI",
+            ],
         ),
     }
 
@@ -345,9 +374,9 @@ def build_intervention_recommendation(
     if anomaly_type == "bhp_depletion" and esp_rul:
         est_cost = ESP_WORKOVER_USD if esp_rul.estimated_rul_days < 60 else ESP_WORKOVER_USD * 0.3
     elif anomaly_type == "oil_rate_collapse":
-        est_cost = 50_000.0   # mobilisation + diagnostics
+        est_cost = 50_000.0  # mobilisation + diagnostics
     else:
-        est_cost = 20_000.0   # engineering investigation cost
+        est_cost = 20_000.0  # engineering investigation cost
 
     benefit_per_day = production_loss.total_daily_impact_usd
     roi_days = est_cost / max(1, benefit_per_day) if benefit_per_day > 0 else 999.0
@@ -360,7 +389,7 @@ def build_intervention_recommendation(
     if esp_rul:
         evidence.append(f"ESP RUL estimate: {esp_rul.estimated_rul_days} days ({esp_rul.confidence} confidence)")
 
-    confidence = min(0.95, 0.4 + consecutive_days * 0.08)   # grows with persistence
+    confidence = min(0.95, 0.4 + consecutive_days * 0.08)  # grows with persistence
 
     return InterventionRecommendation(
         urgency=urgency,
@@ -374,7 +403,7 @@ def build_intervention_recommendation(
     )
 
 
-def get_comparable_incidents(anomaly_type: str, well_id: str) -> list[str]:
+def get_comparable_incidents(anomaly_type: str, _well_id: str) -> list[str]:
     """Return historical analogues from Volve dataset and NPD records."""
     analogues: dict[str, list[str]] = {
         "water_breakthrough": [
@@ -398,9 +427,12 @@ def get_comparable_incidents(anomaly_type: str, well_id: str) -> list[str]:
             "NORSOK D-010 §8.4: requires well integrity verification within 4 hours of unexplained rate collapse",
         ],
     }
-    return analogues.get(anomaly_type, [
-        "No direct analogue found — manual subsurface review recommended",
-    ])
+    return analogues.get(
+        anomaly_type,
+        [
+            "No direct analogue found — manual subsurface review recommended",
+        ],
+    )
 
 
 def assess_business_impact(
@@ -416,23 +448,19 @@ def assess_business_impact(
     Entry point: call this with the output of AdaptiveWellAnomalyDetector.ingest()
     to generate the CFO-legible business case and engineer recommendations.
     """
-    production_loss = estimate_production_loss(
-        anomaly_type, current_values, baseline_values, well_id
-    )
+    production_loss = estimate_production_loss(anomaly_type, current_values, baseline_values, well_id)
     esp_rul = None
     if anomaly_type in ("bhp_depletion", "oil_rate_collapse"):
         esp_rul = estimate_esp_rul(current_values, baseline_values, consecutive_days)
 
     causal_chain = build_causal_chain(anomaly_type, current_values, baseline_values, well_id)
     comparable_incidents = get_comparable_incidents(anomaly_type, well_id)
-    recommendation = build_intervention_recommendation(
-        anomaly_type, production_loss, esp_rul, consecutive_days
-    )
+    recommendation = build_intervention_recommendation(anomaly_type, production_loss, esp_rul, consecutive_days)
 
     return ProductionOptimizerResult(
         well_id=well_id,
         anomaly_type=anomaly_type,
-        assessed_at=datetime.utcnow().isoformat() + "Z",
+        assessed_at=datetime.now(UTC).isoformat().replace("+00:00", "Z"),
         production_loss=production_loss,
         esp_rul=esp_rul,
         recommendation=recommendation,

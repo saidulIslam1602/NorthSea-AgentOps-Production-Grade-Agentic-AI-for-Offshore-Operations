@@ -44,10 +44,10 @@ from __future__ import annotations
 
 import logging
 from collections import deque
-from dataclasses import dataclass, field
-from datetime import datetime
-from enum import Enum
-from typing import Any, Optional
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from enum import StrEnum
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -70,17 +70,17 @@ TELEMETRY_FEATURES = [
 
 # ── Economic parameters (Brent spot, offshore OPEX estimates) ────────────────
 OIL_PRICE_USD_PER_BBL = 80.0
-WATER_LIFTING_COST_USD_PER_BBL = 4.5   # offshore water handling OPEX
+WATER_LIFTING_COST_USD_PER_BBL = 4.5  # offshore water handling OPEX
 GAS_PRICE_USD_PER_MSCF = 8.0
 
 
-class AnomalyType(str, Enum):
+class AnomalyType(StrEnum):
     WATER_BREAKTHROUGH = "water_breakthrough"
-    GOR_SPIKE          = "gor_spike"
-    BHP_DEPLETION      = "bhp_depletion"
-    OIL_RATE_COLLAPSE  = "oil_rate_collapse"
-    THERMAL_EXCURSION  = "thermal_excursion"
-    MULTI_FEATURE      = "multi_feature_correlated"
+    GOR_SPIKE = "gor_spike"
+    BHP_DEPLETION = "bhp_depletion"
+    OIL_RATE_COLLAPSE = "oil_rate_collapse"
+    THERMAL_EXCURSION = "thermal_excursion"
+    MULTI_FEATURE = "multi_feature_correlated"
 
 
 @dataclass
@@ -94,6 +94,7 @@ class EconomicImpact:
 @dataclass
 class AdaptiveAlert:
     """Extended alert with anomaly typing, CUSUM flag, and economic impact."""
+
     base_alert: AnomalyAlert
     anomaly_type: AnomalyType
     cusum_triggered: bool
@@ -107,10 +108,11 @@ class AdaptiveAlert:
 @dataclass
 class CUSUMState:
     """Two-sided CUSUM state for one feature."""
+
     S_pos: float = 0.0
     S_neg: float = 0.0
-    k: float = 0.5    # allowance (slack): detect shifts > k sigma
-    h: float = 4.0    # decision interval: alert when S > h
+    k: float = 0.5  # allowance (slack): detect shifts > k sigma
+    h: float = 4.0  # decision interval: alert when S > h
 
     def update(self, z: float) -> bool:
         self.S_pos = max(0.0, self.S_pos + z - self.k)
@@ -134,14 +136,14 @@ class AdaptiveWellAnomalyDetector:
     def __init__(
         self,
         well_id: str,
-        target_fpr: float = 0.05,            # calibrate to 5% FPR on training data
-        min_consecutive: int = 2,            # persistence filter
-        zscore_window: int = 30,             # rolling window for Z-score (days)
-        cusum_k: float = 0.5,               # CUSUM slack
-        cusum_h: float = 4.0,               # CUSUM decision interval
-        if_contamination: float = 0.02,     # reduced from 5% → 2% for daily data
-        if_n_estimators: int = 200,         # more trees → more stable scores
-        min_train_samples: int = 90,        # minimum days before training IF
+        target_fpr: float = 0.05,  # calibrate to 5% FPR on training data
+        min_consecutive: int = 2,  # persistence filter
+        zscore_window: int = 30,  # rolling window for Z-score (days)
+        cusum_k: float = 0.5,  # CUSUM slack
+        cusum_h: float = 4.0,  # CUSUM decision interval
+        if_contamination: float = 0.02,  # reduced from 5% → 2% for daily data
+        if_n_estimators: int = 200,  # more trees → more stable scores
+        min_train_samples: int = 90,  # minimum days before training IF
         oil_price: float = OIL_PRICE_USD_PER_BBL,
     ) -> None:
         self.well_id = well_id
@@ -152,20 +154,18 @@ class AdaptiveWellAnomalyDetector:
 
         self._buffer: deque[dict[str, float]] = deque(maxlen=500)
         self._scaler = StandardScaler()
-        self._iso_forest: Optional[IsolationForest] = None
+        self._iso_forest: IsolationForest | None = None
         self._is_trained = False
 
         # Per-feature adaptive thresholds (calibrated on training data)
-        self._zscore_thresholds: dict[str, float] = {f: 3.0 for f in TELEMETRY_FEATURES}
+        self._zscore_thresholds: dict[str, float] = dict.fromkeys(TELEMETRY_FEATURES, 3.0)
 
         # CUSUM state per feature
-        self._cusum: dict[str, CUSUMState] = {
-            f: CUSUMState(k=cusum_k, h=cusum_h) for f in TELEMETRY_FEATURES
-        }
+        self._cusum: dict[str, CUSUMState] = {f: CUSUMState(k=cusum_k, h=cusum_h) for f in TELEMETRY_FEATURES}
 
         # Persistence filter: track consecutive anomaly days
         self._consecutive_count: int = 0
-        self._pending_alert: Optional[AdaptiveAlert] = None
+        self._pending_alert: AdaptiveAlert | None = None
         # Refractory period: suppress new alerts N days after a confirmed alert
         # Prevents alert-storm from brief bursts; standard SPC operational practice
         self._refractory_days: int = 7
@@ -175,7 +175,7 @@ class AdaptiveWellAnomalyDetector:
         self._if_n_estimators = if_n_estimators
         self._min_train_samples = min_train_samples
         self._retrain_counter = 0
-        self._retrain_interval = 60   # retrain every 60 days
+        self._retrain_interval = 60  # retrain every 60 days
 
     # ── Calibration (called after warm-up on training data) ────────────────
 
@@ -196,7 +196,7 @@ class AdaptiveWellAnomalyDetector:
             series = df[feat].values
             zscores = []
             for i in range(self.zscore_window, len(series)):
-                window = series[i - self.zscore_window:i]
+                window = series[i - self.zscore_window : i]
                 mu, sigma = window.mean(), window.std()
                 if sigma > 1e-6:
                     zscores.append(abs(series[i] - mu) / sigma)
@@ -207,7 +207,10 @@ class AdaptiveWellAnomalyDetector:
                 self._zscore_thresholds[feat] = float(np.clip(threshold, 2.5, 6.0))
                 logger.debug(
                     "[%s] Calibrated Z threshold for %s: %.2f (target FPR %.0f%%)",
-                    self.well_id, feat, self._zscore_thresholds[feat], self.target_fpr * 100,
+                    self.well_id,
+                    feat,
+                    self._zscore_thresholds[feat],
+                    self.target_fpr * 100,
                 )
 
     def fit(self, train_df: pd.DataFrame) -> None:
@@ -226,7 +229,9 @@ class AdaptiveWellAnomalyDetector:
             cs.reset()
         logger.info(
             "[%s] Fitted on %d training samples. IF trained=%s. Thresholds: %s",
-            self.well_id, len(train_df), self._is_trained,
+            self.well_id,
+            len(train_df),
+            self._is_trained,
             {k: round(v, 2) for k, v in self._zscore_thresholds.items()},
         )
 
@@ -238,21 +243,21 @@ class AdaptiveWellAnomalyDetector:
         df = pd.DataFrame(list(self._buffer))[TELEMETRY_FEATURES].ffill().dropna()
         if len(df) < 50:
             return
-        X = self._scaler.fit_transform(df.values)
+        scaled_rows = self._scaler.fit_transform(df.values)
         self._iso_forest = IsolationForest(
             contamination=self._if_contamination,
             n_estimators=self._if_n_estimators,
-            max_features=0.8,    # feature bagging for robustness
+            max_features=0.8,  # feature bagging for robustness
             random_state=42,
         )
-        self._iso_forest.fit(X)
+        self._iso_forest.fit(scaled_rows)
         self._is_trained = True
         self._retrain_counter = 0
 
     def _compute_zscores(self, reading: dict[str, float]) -> dict[str, float]:
         if len(self._buffer) < self.zscore_window:
-            return {f: 0.0 for f in TELEMETRY_FEATURES}
-        window = list(self._buffer)[-self.zscore_window:]
+            return dict.fromkeys(TELEMETRY_FEATURES, 0.0)
+        window = list(self._buffer)[-self.zscore_window :]
         df = pd.DataFrame(window)[TELEMETRY_FEATURES]
         means = df.mean()
         stds = df.std().replace(0, np.nan)
@@ -272,9 +277,7 @@ class AdaptiveWellAnomalyDetector:
         # Normalise: negative decision_function → anomalous
         return float(np.clip((-raw + 0.2) / 0.5, 0.0, 1.0))
 
-    def _update_cusum(
-        self, zscores: dict[str, float]
-    ) -> dict[str, float]:
+    def _update_cusum(self, zscores: dict[str, float]) -> dict[str, float]:
         """Update CUSUM for each feature; return S_pos per feature."""
         results: dict[str, float] = {}
         for feat in TELEMETRY_FEATURES:
@@ -282,27 +285,24 @@ class AdaptiveWellAnomalyDetector:
             results[feat] = max(self._cusum[feat].S_pos, self._cusum[feat].S_neg)
         return results
 
-    def _classify_anomaly_type(
-        self, zscores: dict[str, float], reading: dict[str, float]
-    ) -> AnomalyType:
+    def _classify_anomaly_type(self, zscores: dict[str, float], reading: dict[str, float]) -> AnomalyType:
         """Domain-heuristic anomaly classification for explainability."""
         if zscores.get("water_cut_pct", 0) > 2.5 and reading.get("water_cut_pct", 0) > 40:
             return AnomalyType.WATER_BREAKTHROUGH
         if zscores.get("gas_oil_ratio", 0) > 2.5:
             return AnomalyType.GOR_SPIKE
-        if (zscores.get("bhp_psi", 0) > 2.5 and
-                reading.get("bhp_psi", 9999) < 2500):
+        if zscores.get("bhp_psi", 0) > 2.5 and reading.get("bhp_psi", 9999) < 2500:
             return AnomalyType.BHP_DEPLETION
-        if (zscores.get("oil_rate_bopd", 0) > 2.5 and
-                reading.get("oil_rate_bopd", 9999) < reading.get("oil_rate_bopd", 9999) * 0.6):
+        if (
+            zscores.get("oil_rate_bopd", 0) > 2.5
+            and reading.get("oil_rate_bopd", 9999) < reading.get("oil_rate_bopd", 9999) * 0.6
+        ):
             return AnomalyType.OIL_RATE_COLLAPSE
         if zscores.get("wh_temp_f", 0) > 3.0:
             return AnomalyType.THERMAL_EXCURSION
         return AnomalyType.MULTI_FEATURE
 
-    def _compute_economic_impact(
-        self, reading: dict[str, float], baseline: dict[str, float]
-    ) -> EconomicImpact:
+    def _compute_economic_impact(self, reading: dict[str, float], baseline: dict[str, float]) -> EconomicImpact:
         """Estimate revenue-at-risk from the deviation."""
         oil_loss = max(0.0, baseline.get("oil_rate_bopd", 0) - reading.get("oil_rate_bopd", 0))
         water_excess = max(0.0, reading.get("water_cut_pct", 0) - baseline.get("water_cut_pct", 0))
@@ -341,7 +341,7 @@ class AdaptiveWellAnomalyDetector:
 
     # ── Public API ──────────────────────────────────────────────────────────
 
-    def ingest(self, reading: dict[str, Any]) -> Optional[AdaptiveAlert]:
+    def ingest(self, reading: dict[str, Any]) -> AdaptiveAlert | None:
         """
         Ingest one telemetry reading.
 
@@ -366,14 +366,10 @@ class AdaptiveWellAnomalyDetector:
         if_score = self._isolation_score(clean)
 
         # Step-change: any feature exceeds its calibrated per-well threshold
-        step_triggered = any(
-            zscores[f] >= self._zscore_thresholds[f]
-            for f in TELEMETRY_FEATURES
-        )
+        step_triggered = any(zscores[f] >= self._zscore_thresholds[f] for f in TELEMETRY_FEATURES)
         # Drift: CUSUM exceeded decision interval h
         cusum_triggered = any(
-            self._cusum[f].S_pos > self._cusum[f].h or
-            self._cusum[f].S_neg > self._cusum[f].h
+            self._cusum[f].S_pos > self._cusum[f].h or self._cusum[f].S_neg > self._cusum[f].h
             for f in TELEMETRY_FEATURES
         )
         # Correlated multivariate anomaly
@@ -387,7 +383,7 @@ class AdaptiveWellAnomalyDetector:
         # operational transients immediately following an event.
         if self._refractory_remaining > 0:
             self._refractory_remaining -= 1
-            self._consecutive_count = 0   # reset so next anomaly needs fresh confirmation
+            self._consecutive_count = 0  # reset so next anomaly needs fresh confirmation
             return None
 
         # ── Persistence filter ──────────────────────────────────────────────
@@ -402,32 +398,26 @@ class AdaptiveWellAnomalyDetector:
             return None
 
         # ── Build confirmed alert ───────────────────────────────────────────
-        affected = [
-            f for f in TELEMETRY_FEATURES
-            if zscores[f] >= self._zscore_thresholds.get(f, 3.0) * 0.8
-        ]
+        affected = [f for f in TELEMETRY_FEATURES if zscores[f] >= self._zscore_thresholds.get(f, 3.0) * 0.8]
         max_z = max(zscores.values(), default=0.0)
         cusum_max = max(cusum_vals.values(), default=0.0)
         severity = self._classify_severity(max_z, if_score, cusum_max)
         anomaly_type = self._classify_anomaly_type(zscores, clean)
 
         # Baseline = readings before the anomaly window
-        baseline_window = list(self._buffer)[-(self.zscore_window + self._consecutive_count):-self._consecutive_count]
+        baseline_window = list(self._buffer)[-(self.zscore_window + self._consecutive_count) : -self._consecutive_count]
         if baseline_window:
             bl_df = pd.DataFrame(baseline_window)[TELEMETRY_FEATURES]
             baseline = bl_df.mean().to_dict()
         else:
             baseline = clean.copy()
 
-        deviation_pct = {
-            f: round(100 * (clean[f] - baseline[f]) / max(abs(baseline[f]), 1e-6), 1)
-            for f in affected
-        }
+        deviation_pct = {f: round(100 * (clean[f] - baseline[f]) / max(abs(baseline[f]), 1e-6), 1) for f in affected}
         economic = self._compute_economic_impact(clean, baseline)
         anomaly_score = float(min(1.0, max(if_score, max_z / max(self._zscore_thresholds.values(), default=3.0))))
 
         base = AnomalyAlert(
-            timestamp=reading.get("timestamp", datetime.utcnow()),
+            timestamp=reading.get("timestamp", datetime.now(UTC)),
             well_id=reading.get("well_id", self.well_id),
             field_name=reading.get("field_name", "VOLVE"),
             severity=severity,
@@ -468,7 +458,4 @@ class AdaptiveWellAnomalyDetector:
 
 
 def _format_features(affected: list[str], dev_pct: dict[str, float]) -> str:
-    return ", ".join(
-        f"{f.replace('_', ' ')} ({dev_pct.get(f, 0):+.1f}%)"
-        for f in affected
-    )
+    return ", ".join(f"{f.replace('_', ' ')} ({dev_pct.get(f, 0):+.1f}%)" for f in affected)

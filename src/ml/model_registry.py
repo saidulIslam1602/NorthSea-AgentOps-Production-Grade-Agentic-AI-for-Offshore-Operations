@@ -51,22 +51,21 @@ import pickle
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import mlflow
 import mlflow.pyfunc
 import mlflow.sklearn
-import numpy as np
 import pandas as pd
 from mlflow import MlflowClient
-from mlflow.models import ModelSignature, infer_signature
+from mlflow.models import ModelSignature
 from mlflow.types.schema import ColSpec, Schema
 
 logger = logging.getLogger(__name__)
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 MODEL_NAME_PREFIX = "northsea-well-anomaly-detector"
-EXPERIMENT_NAME   = "northsea-agentops-detector-training"
+EXPERIMENT_NAME = "northsea-agentops-detector-training"
 
 TELEMETRY_FEATURES = [
     "oil_rate_bopd",
@@ -79,31 +78,32 @@ TELEMETRY_FEATURES = [
 
 # Quality gate thresholds for Production promotion
 PRODUCTION_GATE = {
-    "event_recall_min":    0.85,
-    "day_fpr_max":         0.20,
+    "event_recall_min": 0.85,
+    "day_fpr_max": 0.20,
     # Override: allow daily data with documented justification
     "allow_daily_data_override": True,
-    "daily_data_min_event_recall": 0.60,   # minimum even for daily data
+    "daily_data_min_event_recall": 0.60,  # minimum even for daily data
 }
 
 # MLflow stage aliases (MLflow 2.x uses aliases instead of stage strings)
-STAGE_STAGING    = "Staging"
+STAGE_STAGING = "Staging"
 STAGE_PRODUCTION = "Production"
-STAGE_ARCHIVED   = "Archived"
+STAGE_ARCHIVED = "Archived"
 
 
 @dataclass
 class ModelMetrics:
     """Evaluation metrics attached to a registered model version."""
+
     well_id: str
-    detector_version: str         # "v1" or "v2"
+    detector_version: str  # "v1" or "v2"
     event_recall: float
     day_fpr: float
     day_precision: float
     roc_auc: float
     training_rows: int
     test_rows: int
-    data_granularity: str         # "daily" | "hourly" | "15min"
+    data_granularity: str  # "daily" | "hourly" | "15min"
     data_source: str
     zscore_thresholds: dict[str, float] = field(default_factory=dict)
     if_contamination: float = 0.02
@@ -114,10 +114,7 @@ class ModelMetrics:
         gate = PRODUCTION_GATE
         if self.data_granularity == "daily" and gate["allow_daily_data_override"]:
             return self.event_recall >= gate["daily_data_min_event_recall"]
-        return (
-            self.event_recall >= gate["event_recall_min"]
-            and self.day_fpr   <= gate["day_fpr_max"]
-        )
+        return self.event_recall >= gate["event_recall_min"] and self.day_fpr <= gate["day_fpr_max"]
 
     @property
     def promotion_justification(self) -> str:
@@ -161,41 +158,44 @@ class WellDetectorPyfunc(mlflow.pyfunc.PythonModel):
         thresholds_path = context.artifacts["adaptive_thresholds"]
 
         with open(detector_path, "rb") as f:
-            self._detector_state = pickle.load(f)   # (scaler, iso_forest)
+            self._detector_state = pickle.load(f)  # (scaler, iso_forest)
 
         with open(thresholds_path) as f:
             self._thresholds = json.load(f)
 
         from src.anomaly.adaptive_detector import AdaptiveWellAnomalyDetector
+
         self._detector = AdaptiveWellAnomalyDetector.__new__(AdaptiveWellAnomalyDetector)
-        self._detector._scaler     = self._detector_state["scaler"]
+        self._detector._scaler = self._detector_state["scaler"]
         self._detector._iso_forest = self._detector_state["iso_forest"]
         self._detector._is_trained = True
         self._detector._zscore_thresholds = self._thresholds
         self._detector.well_id = self._detector_state["well_id"]
         self._detector.min_consecutive = self._detector_state.get("min_consecutive", 2)
-        self._detector._refractory_days     = 7
+        self._detector._refractory_days = 7
         self._detector._refractory_remaining = 0
-        self._detector._consecutive_count   = 0
+        self._detector._consecutive_count = 0
 
         from collections import deque
+
         from src.anomaly.adaptive_detector import CUSUMState
+
         self._detector._buffer = deque(maxlen=500)
-        self._detector._cusum  = {f: CUSUMState() for f in TELEMETRY_FEATURES}
-        self._detector._retrain_counter  = 0
+        self._detector._cusum = {f: CUSUMState() for f in TELEMETRY_FEATURES}
+        self._detector._retrain_counter = 0
         self._detector._retrain_interval = 60
-        self._detector.zscore_window     = 30
-        self._detector.oil_price         = 80.0
-        self._detector.target_fpr        = 0.05
+        self._detector.zscore_window = 30
+        self._detector.oil_price = 80.0
+        self._detector.target_fpr = 0.05
         self._detector._if_contamination = 0.02
-        self._detector._if_n_estimators  = 200
+        self._detector._if_n_estimators = 200
         self._detector._min_train_samples = 90
 
     def predict(
         self,
         context: mlflow.pyfunc.PythonModelContext,
         model_input: pd.DataFrame,
-        params: Optional[dict] = None,
+        params: dict | None = None,
     ) -> pd.DataFrame:
         """
         Score a batch of telemetry readings.
@@ -203,60 +203,64 @@ class WellDetectorPyfunc(mlflow.pyfunc.PythonModel):
         Each row is treated as a sequential reading (order matters for CUSUM).
         Returns one row of scores per input row.
         """
+        del context, params  # Provided by MLflow pyfunc runner; artefacts already in load_context.
         results = []
         for _, row in model_input.iterrows():
             reading = {f: float(row.get(f, 0.0)) for f in TELEMETRY_FEATURES}
-            reading["well_id"]    = self._detector.well_id
+            reading["well_id"] = self._detector.well_id
             reading["field_name"] = "VOLVE"
             alert = self._detector.ingest(reading)
 
             if alert is not None:
-                results.append({
-                    "anomaly_score":        alert.base_alert.anomaly_score,
-                    "anomaly_type":         alert.anomaly_type.value,
-                    "severity":             alert.base_alert.severity.value,
-                    "economic_impact_usd":  alert.economic_impact.revenue_at_risk_usd_per_day,
-                    "cusum_triggered":      alert.cusum_triggered,
-                    "consecutive_days":     alert.consecutive_days,
-                    "is_anomaly":           True,
-                })
+                results.append(
+                    {
+                        "anomaly_score": alert.base_alert.anomaly_score,
+                        "anomaly_type": alert.anomaly_type.value,
+                        "severity": alert.base_alert.severity.value,
+                        "economic_impact_usd": alert.economic_impact.revenue_at_risk_usd_per_day,
+                        "cusum_triggered": alert.cusum_triggered,
+                        "consecutive_days": alert.consecutive_days,
+                        "is_anomaly": True,
+                    }
+                )
             else:
-                results.append({
-                    "anomaly_score":        0.0,
-                    "anomaly_type":         "normal",
-                    "severity":             "normal",
-                    "economic_impact_usd":  0.0,
-                    "cusum_triggered":      False,
-                    "consecutive_days":     0,
-                    "is_anomaly":           False,
-                })
+                results.append(
+                    {
+                        "anomaly_score": 0.0,
+                        "anomaly_type": "normal",
+                        "severity": "normal",
+                        "economic_impact_usd": 0.0,
+                        "cusum_triggered": False,
+                        "consecutive_days": 0,
+                        "is_anomaly": False,
+                    }
+                )
 
         return pd.DataFrame(results)
 
 
 def _build_model_signature() -> ModelSignature:
     """Define input/output schema for the detector model."""
-    input_schema = Schema([
-        ColSpec("double", col) for col in TELEMETRY_FEATURES
-    ])
-    output_schema = Schema([
-        ColSpec("double", "anomaly_score"),
-        ColSpec("string", "anomaly_type"),
-        ColSpec("string", "severity"),
-        ColSpec("double", "economic_impact_usd"),
-        ColSpec("boolean", "cusum_triggered"),
-        ColSpec("long",    "consecutive_days"),
-        ColSpec("boolean", "is_anomaly"),
-    ])
+    input_schema = Schema([ColSpec("double", col) for col in TELEMETRY_FEATURES])
+    output_schema = Schema(
+        [
+            ColSpec("double", "anomaly_score"),
+            ColSpec("string", "anomaly_type"),
+            ColSpec("string", "severity"),
+            ColSpec("double", "economic_impact_usd"),
+            ColSpec("boolean", "cusum_triggered"),
+            ColSpec("long", "consecutive_days"),
+            ColSpec("boolean", "is_anomaly"),
+        ]
+    )
     return ModelSignature(inputs=input_schema, outputs=output_schema)
 
 
 def register_detector(
-    detector: Any,           # AdaptiveWellAnomalyDetector instance (post-fit)
+    detector: Any,  # AdaptiveWellAnomalyDetector instance (post-fit)
     metrics: ModelMetrics,
     tracking_uri: str = "http://localhost:5001",
-    artifact_path: Optional[str] = None,
-    eval_json_path: Optional[Path] = None,
+    eval_json_path: Path | None = None,
 ) -> str:
     """
     Log a trained detector to MLflow and register in the Model Registry.
@@ -281,29 +285,33 @@ def register_detector(
         run_id = run.info.run_id
 
         # ── Log parameters ────────────────────────────────────────────────
-        mlflow.log_params({
-            "well_id":             metrics.well_id,
-            "detector_version":    metrics.detector_version,
-            "data_source":         metrics.data_source,
-            "data_granularity":    metrics.data_granularity,
-            "training_rows":       metrics.training_rows,
-            "if_contamination":    metrics.if_contamination,
-            "min_consecutive":     detector.min_consecutive,
-            "refractory_days":     detector._refractory_days,
-            "zscore_window":       detector.zscore_window,
-            "cusum_k":             detector._cusum[TELEMETRY_FEATURES[0]].k,
-            "cusum_h":             detector._cusum[TELEMETRY_FEATURES[0]].h,
-        })
+        mlflow.log_params(
+            {
+                "well_id": metrics.well_id,
+                "detector_version": metrics.detector_version,
+                "data_source": metrics.data_source,
+                "data_granularity": metrics.data_granularity,
+                "training_rows": metrics.training_rows,
+                "if_contamination": metrics.if_contamination,
+                "min_consecutive": detector.min_consecutive,
+                "refractory_days": detector._refractory_days,
+                "zscore_window": detector.zscore_window,
+                "cusum_k": detector._cusum[TELEMETRY_FEATURES[0]].k,
+                "cusum_h": detector._cusum[TELEMETRY_FEATURES[0]].h,
+            }
+        )
 
         # ── Log metrics ───────────────────────────────────────────────────
-        mlflow.log_metrics({
-            "event_recall":     metrics.event_recall,
-            "day_fpr":          metrics.day_fpr,
-            "day_precision":    metrics.day_precision,
-            "roc_auc":          metrics.roc_auc,
-            "test_rows":        float(metrics.test_rows),
-            "training_rows":    float(metrics.training_rows),
-        })
+        mlflow.log_metrics(
+            {
+                "event_recall": metrics.event_recall,
+                "day_fpr": metrics.day_fpr,
+                "day_precision": metrics.day_precision,
+                "roc_auc": metrics.roc_auc,
+                "test_rows": float(metrics.test_rows),
+                "training_rows": float(metrics.training_rows),
+            }
+        )
         for feat, thresh in metrics.zscore_thresholds.items():
             mlflow.log_metric(f"zscore_threshold_{feat}", thresh)
 
@@ -312,31 +320,38 @@ def register_detector(
             # Detector state (scaler + IF model)
             state_path = os.path.join(tmpdir, "detector_state.pkl")
             thresholds_path = os.path.join(tmpdir, "adaptive_thresholds.json")
-            metrics_path    = os.path.join(tmpdir, "model_metrics.json")
+            metrics_path = os.path.join(tmpdir, "model_metrics.json")
 
             with open(state_path, "wb") as f:
-                pickle.dump({
-                    "well_id":        metrics.well_id,
-                    "scaler":         detector._scaler,
-                    "iso_forest":     detector._iso_forest,
-                    "min_consecutive": detector.min_consecutive,
-                }, f)
+                pickle.dump(
+                    {
+                        "well_id": metrics.well_id,
+                        "scaler": detector._scaler,
+                        "iso_forest": detector._iso_forest,
+                        "min_consecutive": detector.min_consecutive,
+                    },
+                    f,
+                )
 
             with open(thresholds_path, "w") as f:
                 json.dump(detector._zscore_thresholds, f, indent=2)
 
             with open(metrics_path, "w") as f:
-                json.dump({
-                    "event_recall": metrics.event_recall,
-                    "day_fpr":      metrics.day_fpr,
-                    "roc_auc":      metrics.roc_auc,
-                    "gate_passed":  metrics.meets_production_gate,
-                    "justification": metrics.promotion_justification,
-                }, f, indent=2)
+                json.dump(
+                    {
+                        "event_recall": metrics.event_recall,
+                        "day_fpr": metrics.day_fpr,
+                        "roc_auc": metrics.roc_auc,
+                        "gate_passed": metrics.meets_production_gate,
+                        "justification": metrics.promotion_justification,
+                    },
+                    f,
+                    indent=2,
+                )
 
-            mlflow.log_artifact(state_path,     artifact_path="detector")
+            mlflow.log_artifact(state_path, artifact_path="detector")
             mlflow.log_artifact(thresholds_path, artifact_path="detector")
-            mlflow.log_artifact(metrics_path,    artifact_path="detector")
+            mlflow.log_artifact(metrics_path, artifact_path="detector")
 
             if eval_json_path and eval_json_path.exists():
                 mlflow.log_artifact(str(eval_json_path), artifact_path="evaluation")
@@ -345,20 +360,24 @@ def register_detector(
             signature = _build_model_signature()
 
             # Build input example for model card
-            input_example = pd.DataFrame([{
-                "oil_rate_bopd": 5000.0,
-                "water_cut_pct":   45.0,
-                "gas_oil_ratio":  850.0,
-                "bhp_psi":       3400.0,
-                "wh_temp_f":      162.0,
-                "choke_64ths":     40.0,
-            }])
+            input_example = pd.DataFrame(
+                [
+                    {
+                        "oil_rate_bopd": 5000.0,
+                        "water_cut_pct": 45.0,
+                        "gas_oil_ratio": 850.0,
+                        "bhp_psi": 3400.0,
+                        "wh_temp_f": 162.0,
+                        "choke_64ths": 40.0,
+                    }
+                ]
+            )
 
             mlflow.pyfunc.log_model(
                 artifact_path="model",
                 python_model=WellDetectorPyfunc(),
                 artifacts={
-                    "detector_state":      state_path,
+                    "detector_state": state_path,
                     "adaptive_thresholds": thresholds_path,
                 },
                 signature=signature,
@@ -386,25 +405,28 @@ def register_detector(
             name=model_name,
             version=version_str,
             stage=target_stage,
-            archive_existing_versions=False,   # keep previous production for rollback
+            archive_existing_versions=False,  # keep previous production for rollback
         )
 
         # Rich tags on the model version
-        client.set_model_version_tag(model_name, version_str, "well_id",          metrics.well_id)
+        client.set_model_version_tag(model_name, version_str, "well_id", metrics.well_id)
         client.set_model_version_tag(model_name, version_str, "detector_version", metrics.detector_version)
-        client.set_model_version_tag(model_name, version_str, "data_source",      metrics.data_source)
+        client.set_model_version_tag(model_name, version_str, "data_source", metrics.data_source)
         client.set_model_version_tag(model_name, version_str, "data_granularity", metrics.data_granularity)
-        client.set_model_version_tag(model_name, version_str, "event_recall",     str(round(metrics.event_recall, 4)))
-        client.set_model_version_tag(model_name, version_str, "day_fpr",          str(round(metrics.day_fpr, 4)))
-        client.set_model_version_tag(model_name, version_str, "gate_passed",      str(metrics.meets_production_gate))
-        client.set_model_version_tag(model_name, version_str, "justification",    metrics.promotion_justification)
+        client.set_model_version_tag(model_name, version_str, "event_recall", str(round(metrics.event_recall, 4)))
+        client.set_model_version_tag(model_name, version_str, "day_fpr", str(round(metrics.day_fpr, 4)))
+        client.set_model_version_tag(model_name, version_str, "gate_passed", str(metrics.meets_production_gate))
+        client.set_model_version_tag(model_name, version_str, "justification", metrics.promotion_justification)
 
         model_uri = f"models:/{model_name}/{version_str}"
 
         logger.info(
             "[%s] Model v%s registered as '%s' in stage '%s'. Gate: %s",
-            metrics.well_id, version_str, model_name,
-            target_stage, "PASS" if metrics.meets_production_gate else "FAIL → Staging",
+            metrics.well_id,
+            version_str,
+            model_name,
+            target_stage,
+            "PASS" if metrics.meets_production_gate else "FAIL → Staging",
         )
         logger.info("  Justification: %s", metrics.promotion_justification)
         logger.info("  URI: %s | Run: %s", model_uri, run_id)
@@ -416,7 +438,7 @@ def get_production_model_uri(
     well_id: str,
     tracking_uri: str = "http://localhost:5001",
     fallback_to_staging: bool = True,
-) -> Optional[str]:
+) -> str | None:
     """
     Retrieve the Production-stage model URI for a given well.
 
@@ -441,9 +463,7 @@ def get_production_model_uri(
             versions = client.get_latest_versions(model_name, stages=[STAGE_STAGING])
             if versions:
                 v = versions[0]
-                logger.warning(
-                    "No Production model for %s — using Staging v%s", well_id, v.version
-                )
+                logger.warning("No Production model for %s — using Staging v%s", well_id, v.version)
                 return f"models:/{model_name}/{v.version}"
     except Exception as e:
         logger.error("Registry lookup failed for %s: %s", well_id, e)
@@ -460,18 +480,20 @@ def list_all_model_versions(
     try:
         for rm in client.search_registered_models(filter_string=f"name LIKE '{MODEL_NAME_PREFIX}%'"):
             for v in client.get_latest_versions(rm.name):
-                rows.append({
-                    "model_name":    rm.name,
-                    "version":       v.version,
-                    "stage":         v.current_stage,
-                    "well_id":       v.tags.get("well_id", ""),
-                    "detector_version": v.tags.get("detector_version", ""),
-                    "event_recall":  v.tags.get("event_recall", ""),
-                    "day_fpr":       v.tags.get("day_fpr", ""),
-                    "gate_passed":   v.tags.get("gate_passed", ""),
-                    "data_source":   v.tags.get("data_source", ""),
-                    "created":       v.creation_timestamp,
-                })
+                rows.append(
+                    {
+                        "model_name": rm.name,
+                        "version": v.version,
+                        "stage": v.current_stage,
+                        "well_id": v.tags.get("well_id", ""),
+                        "detector_version": v.tags.get("detector_version", ""),
+                        "event_recall": v.tags.get("event_recall", ""),
+                        "day_fpr": v.tags.get("day_fpr", ""),
+                        "gate_passed": v.tags.get("gate_passed", ""),
+                        "data_source": v.tags.get("data_source", ""),
+                        "created": v.creation_timestamp,
+                    }
+                )
     except Exception as e:
         logger.error("Failed to list model versions: %s", e)
     return rows
@@ -480,7 +502,7 @@ def list_all_model_versions(
 def rollback_to_previous_production(
     well_id: str,
     tracking_uri: str = "http://localhost:5001",
-) -> Optional[str]:
+) -> str | None:
     """
     Rollback: archive current Production, promote previous version back to Production.
 

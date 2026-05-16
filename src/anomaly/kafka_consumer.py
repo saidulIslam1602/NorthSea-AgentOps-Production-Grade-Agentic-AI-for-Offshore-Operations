@@ -12,6 +12,7 @@ import json
 import logging
 from datetime import datetime
 
+import pandas as pd
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 
 from src.anomaly.detector import WellAnomalyDetector
@@ -107,10 +108,8 @@ class TelemetryProducer:
             raise RuntimeError("Producer not started")
         await self._producer.send(settings.kafka_topic_telemetry, value=reading)
 
-    async def send_dataframe(self, df: "pd.DataFrame", delay_ms: int = 100) -> None:
+    async def send_dataframe(self, df: pd.DataFrame, delay_ms: int = 100) -> None:
         """Stream a DataFrame of readings to Kafka with a delay between each."""
-        import pandas as pd  # noqa: F401
-
         for _, row in df.iterrows():
             await self.send_reading(row.to_dict())
             if delay_ms > 0:

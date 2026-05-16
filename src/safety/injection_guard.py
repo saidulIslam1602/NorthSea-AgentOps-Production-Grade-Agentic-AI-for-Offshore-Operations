@@ -23,6 +23,8 @@ import logging
 import re
 from dataclasses import dataclass
 
+from src.safety.audit_log import AuditLogger
+
 logger = logging.getLogger(__name__)
 
 # ─── Injection Patterns ───────────────────────────────────────────────────────
@@ -43,7 +45,10 @@ INJECTION_PATTERNS: list[re.Pattern[str]] = [
     re.compile(r"\[INST\]", re.IGNORECASE),
     re.compile(r"###\s*(System|Instruction|Override)\s*:", re.IGNORECASE),
     # Data exfiltration attempts
-    re.compile(r"(print|output|show|reveal|display)\s+(all|your|the\s+system)\s+(prompt|instructions|key|secret)", re.IGNORECASE),
+    re.compile(
+        r"(print|output|show|reveal|display)\s+(all|your|the\s+system)\s+(prompt|instructions|key|secret)",
+        re.IGNORECASE,
+    ),
     re.compile(r"what\s+(are|is)\s+your\s+(instructions?|system\s+prompt|directive)", re.IGNORECASE),
     re.compile(r"repeat\s+(everything|all|your\s+(instructions?|prompt))", re.IGNORECASE),
     # Action override attempts
@@ -57,8 +62,13 @@ INJECTION_PATTERNS: list[re.Pattern[str]] = [
 
 # Legitimate operational terms that might trigger false positives — allow them
 ALLOWLIST_TERMS = [
-    "override valve", "safety override", "bypass valve", "bypass line",
-    "ignore outliers", "disregard noise", "act as a reference",
+    "override valve",
+    "safety override",
+    "bypass valve",
+    "bypass line",
+    "ignore outliers",
+    "disregard noise",
+    "act as a reference",
 ]
 
 
@@ -79,9 +89,7 @@ def _build_allowlist_pattern(term: str) -> re.Pattern[str]:
 
 
 # Pre-compiled allowlist patterns (each anchored to a word-level match)
-_ALLOWLIST_PATTERNS: list[re.Pattern[str]] = [
-    _build_allowlist_pattern(t) for t in ALLOWLIST_TERMS
-]
+_ALLOWLIST_PATTERNS: list[re.Pattern[str]] = [_build_allowlist_pattern(t) for t in ALLOWLIST_TERMS]
 
 
 def _mask_allowlisted_spans(text: str) -> str:
@@ -142,10 +150,7 @@ def check_for_injection(text: str) -> InjectionCheckResult:
     if severity == "LOW" and len(matches) >= 3:
         severity = "HIGH"
 
-    logger.warning(
-        "Prompt injection detected [%s]: %d patterns matched. Hash: %s",
-        severity, len(matches), input_hash
-    )
+    logger.warning("Prompt injection detected [%s]: %d patterns matched. Hash: %s", severity, len(matches), input_hash)
 
     return InjectionCheckResult(
         is_clean=False,
@@ -158,7 +163,7 @@ def check_for_injection(text: str) -> InjectionCheckResult:
 
 def sanitise_retrieved_chunks(
     chunks: list[dict],
-    audit_logger: "AuditLogger | None" = None,
+    audit_logger: AuditLogger | None = None,
 ) -> list[dict]:
     """
     Sanitise all retrieved document chunks before injection into prompts.
@@ -197,10 +202,7 @@ def sanitise_retrieved_chunks(
         sanitised_chunks.append(chunk)
 
     if injections_found > 0:
-        logger.warning(
-            "Sanitised %d/%d chunks with injection patterns",
-            injections_found, len(chunks)
-        )
+        logger.warning("Sanitised %d/%d chunks with injection patterns", injections_found, len(chunks))
 
     return sanitised_chunks
 
@@ -209,8 +211,5 @@ def check_user_query(query: str) -> InjectionCheckResult:
     """Check a user-supplied query for injection attempts."""
     result = check_for_injection(query)
     if not result.is_clean:
-        logger.warning(
-            "User query injection detected [%s]: %s",
-            result.severity, query[:100]
-        )
+        logger.warning("User query injection detected [%s]: %s", result.severity, query[:100])
     return result

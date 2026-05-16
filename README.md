@@ -1,6 +1,6 @@
 # NorthSea AgentOps — Production‑Grade Agentic AI for Offshore Operations
 
-This **README is the canonical self‑documentation** for the repository: business context, architecture, behavioural strategies, operational flows, technical modules, governance, limitations, and how to run everything locally. Architectural trade‑offs live in **`docs/adr/`** (summarised below with links).
+This **README is the canonical self‑documentation** for the repository: business context, architecture, behavioural strategies, operational flows, technical modules, governance, limitations, and how to run everything locally. **Architecture and trade-offs are consolidated here—there are no separate ADR markdown files in this repo.**
 
 ---
 
@@ -11,8 +11,8 @@ This **README is the canonical self‑documentation** for the repository: busine
 | Hiring manager / product | [Executive summary](#1-executive-summary), [Business context](#2-business-context--problem-space), [Value proposition](#26-value-proposition--business-outcomes) |
 | Reservoir / production engineer | [User journeys](#3-stakeholders--user-journeys), [Detector strategy](#81-anomaly-detection-strategy-v1-vs-v2), [Glossary](#6-domain-language--glossary) |
 | ML / MLOps engineer | [ML lifecycle](#82-model-lifecycle-mlflow--dvc), [Evaluation](#14-evaluation--experimentation-eval), [CI quality gates](#20-cicd-github-actions) |
-| Security / compliance | [Security posture](#18-security-safety--compliance-posture), [ADRs](#19-architectural-decisions-adrs) |
-| Developer onboarding | [Quick start](#24-quick-start--examples), [Repository map](#12-repository-layout), [Module reference](#13-python-modules-src) |
+| Security / compliance | [Security posture](#18-security-safety--compliance-posture), [Architectural rationale](#19-architectural-rationale-summarised) |
+| Developer onboarding | [Quick start](#27-quick-start--examples), [Repository map](#12-repository-layout), [Module reference](#13-python-modules-src) |
 
 ---
 
@@ -36,7 +36,7 @@ This **README is the canonical self‑documentation** for the repository: busine
 16. [Data governance & licences](#16-data-governance--licences)  
 17. [Configuration & environment](#17-configuration--environment-variables)  
 18. [Security, safety & compliance posture](#18-security-safety--compliance-posture)  
-19. [Architectural decisions (ADRs)](#19-architectural-decisions-adrs)  
+19. [Architectural rationale (summarised)](#19-architectural-rationale-summarised)  
 20. [CI/CD (GitHub Actions)](#20-cicd-github-actions)  
 21. [Observability & operations](#21-observability--operations-runbook-notes)  
 22. [Testing strategy](#22-testing-strategy)  
@@ -154,7 +154,7 @@ These are **design targets**—tune per deployment:
 |-----|---------------|---------------|
 | **Investigation bounded runtime** | `AGENT_TIMEOUT_SECONDS` (see `.env.example`) avoids runaway graphs | Histograms exposed via orchestrator + FastAPI timings |
 | **Explainability bias** | Affected tags, anomaly types, cited docs visible in payloads | Persisted citations count in API responses |
-| **Maintainability** | ADRs mandatory for paradigm shifts | `docs/adr/*.md` |
+| **Maintainability** | Cross-cutting changes documented in README + commit messages | This file and section [19](#19-architectural-rationale-summarised) |
 | **Isolation** | No silent LLM‑only physics claims beyond evidence thresholds | Challenger + Gate |
 
 ---
@@ -210,7 +210,7 @@ Evaluation protocol in `scripts/train_detector_v2.py` uses **temporal splitting 
 ### 8.2 Model lifecycle (MLflow & DVC)
 
 - **Runs** capture parameters and metrics (`eval/ragas_eval.py`, `eval/calibration.py`, detector training).  
-- **Model Registry** (see `src/ml/model_registry.py`) formalises **`WellDetectorPyfunc`** artefacts with schemas and promotion gates outlined in **`docs/adr/ADR-006-mlops-model-registry.md`**.  
+- **Model Registry** (see `src/ml/model_registry.py`) formalises **`WellDetectorPyfunc`** artefacts with schemas and promotion gates (**full vs daily-data thresholds** documented in README and mirrored in CI `model-quality-gate`).  
 - **DVC** (`dvc.yaml`) encodes repeatable pipeline stages—even if large binary data remains local‑only due to licences.
 
 Operational sequence (conceptual):
@@ -225,7 +225,7 @@ Data pin (DVC/manual) → train/eval scripts → artefact JSON + MLflow Run
 
 ## 9. Agentic investigation strategy
 
-Patterns are documented in **`docs/adr/ADR-005-agentic-patterns.md`**:
+Patterns retained in codebase (Planner / Executor / Critic / Challenger / Gate / optional ReAct):
 
 | Strategy | Used when |
 |----------|-----------|
@@ -385,9 +385,9 @@ Consumer (`src/anomaly/kafka_consumer.py`) aligns with Compose topic names `KAFK
 | `scripts/` | Training / benchmarking scripts. |
 | `tests/unit/` | Unit tests incl. anomaly + safety. |
 | `tests/integration/` | RAG/integration DB bound tests selectively marked. |
-| `infra/` | SQL init (`infra/sql/init.sql`), k8s example, Grafana & Prometheus snippets, OTLP collector YAML. |
-| `docs/adr/` | ADR‑001 … ADR‑006. |
 | `.github/workflows/` | `ci.yml`, `eval-gate.yml`. |
+
+Stand-alone ADR markdown files were **removed** from this repo; concise rationale stays in **[Section 19](#19-architectural-rationale-summarised)**.
 
 ---
 
@@ -518,20 +518,20 @@ Services exposed for development include **PostgreSQL (`5432`)**, **Kafka (`9092
 
 > **Disclaimer:** Demo posture ≠ certified industrial cyber programme. Operators must overlay corporate IAM, segregated VPCs/VNets, private endpoints for LLMs, KMS secret rotation, egress controls, DPIA workflows, Norwegian **NORSOK** / **IEC 62443** overlays as applicable.
 
-Align philosophically with **NORSOK Z‑013**: traceability narratives between analysis inputs and consequential recommendations—ADR‑006 cites registry traceability parallels.
+Align philosophically with **NORSOK Z‑013**: traceability between analysis inputs and consequential recommendations—with **MLflow Model Registry tags** (`src/ml/model_registry.py`) modelling auditable lineage for detector artefacts.
 
 ---
 
-## 19. Architectural decisions (ADRs)
+## 19. Architectural rationale (summarised)
 
-| ADR | Concise rationale |
-|-----|-------------------|
-| [ADR‑001](docs/adr/ADR-001-langgraph-vs-alternatives.md) | Why LangGraph for structured loops & checkpointing ergonomics. |
-| [ADR‑002](docs/adr/ADR-002-pgvector-vs-vector-dbs.md) | Operational simplicity vs SaaS specialised vector infra. |
-| [ADR‑003](docs/adr/ADR-003-evaluation-stack.md) | Measuring regressions objectively instead of vibes. |
-| [ADR‑004](docs/adr/ADR-004-kafka-streaming.md) | Decoupling ingestion bursts from investigative compute. |
-| [ADR‑005](docs/adr/ADR-005-agentic-patterns.md) | When ReAct suffices vs heavyweight multi‑agents. |
-| [ADR‑006](docs/adr/ADR-006-mlops-model-registry.md) | Lifecycle & promotion framing for audited ML artefacts. |
+| Topic | Rationale captured in codebase |
+|-------|-------------------------------|
+| **Agent orchestration** | **LangGraph** for explicit Planner → Executor loops, checkpointing hooks, routing to challenger and uncertainty gate (`src/agents/orchestrator.py`). |
+| **Vector + OLTP storage** | **PostgreSQL + pgvector** keeps investigations, escalations, and embeddings co-located for simpler ops than split OLTP + SaaS vectors (`src/rag/`, migrations). |
+| **Evaluation discipline** | **RAGAS** + offline **agent_eval** / **calibration** modules + detector JSON artefacts for reproducible regressions (`eval/`). |
+| **Streaming ingestion** | **Kafka** shapes mirror separation of historians from compute; maps to enterprise Event Hub patterns (`src/anomaly/kafka_consumer.py`, `Settings` topics). |
+| **Agent coordination patterns** | Full **plan–execute–critic–challenge** pipeline for RCA; lighter **ReAct** path retained for scoped queries (`src/agents/`). |
+| **MLOps & promotion** | **MLflow runs + Model Registry + DVC-aware pipeline** stubs with CI quality gate thresholds for staged promotion (`src/ml/model_registry.py`, `.github/workflows/ci.yml`). |
 
 ---
 
@@ -608,11 +608,11 @@ Far‑research horizon: differentiable surrogate coupling (requires proprietary 
 
 ## 25. Contributing & documentation discipline
 
-Pull requests altering cross‑cutting behaviour **must** update or supersede relevant **ADR**.
+Pull requests altering cross‑cutting behaviour **must update this README** — especially Sections [8](#8-anomaly-detection--ml-lifecycle), [19](#19-architectural-rationale-summarised), and [23](#23-honest-limitations--risks) — so the public narrative stays aligned with code.
 
-Detector logic changes ideally refresh **`eval/detector_performance_v2.json`** reproducibly or justify stale metrics consciously.
+Detector logic changes ideally refresh **`eval/detector_performance_v2.json`** reproducibly, or the PR description must justify unchanged metrics.
 
-Maintain **dual documentation**: README conceptual + ADR granular engineering proof.
+**Single spine:** architectural intent lives here (standalone ADR markdown files are intentionally not shipped in this repo).
 
 ---
 
@@ -687,4 +687,4 @@ This repository ships **research / portfolio code** authored by contributors. **
 
 ---
 
-_Last README structural refresh targets self‑containment for repository archival & hiring packet usage. For micro‑decisions, always reconcile with latest source + ADRs first._
+_Last README refresh targets self‑containment for repository archival and hiring use. Prefer reconciling behavioural truth with **`git`** history and **`eval/detector_performance_v2.json`** over narrative drift._

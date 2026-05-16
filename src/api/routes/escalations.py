@@ -84,8 +84,7 @@ async def resolve_escalation(
                 WHERE escalation_id = %s
                 RETURNING *
                 """,
-                (request.new_status.upper(), request.resolved_by,
-                 request.resolution_notes, str(escalation_id)),
+                (request.new_status.upper(), request.resolved_by, request.resolution_notes, str(escalation_id)),
             )
             row = await cur.fetchone()
         await conn.commit()

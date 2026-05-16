@@ -77,6 +77,7 @@ def _escalate_or_output(state: dict[str, Any]) -> str:
 
 # ─── Node wrappers ────────────────────────────────────────────────────────────
 
+
 async def planner_node(state: dict[str, Any]) -> dict[str, Any]:
     return await run_planner(state)
 
@@ -154,10 +155,7 @@ async def _output_node_with_conn(
                     state.get("risk_level", "MEDIUM"),
                     state.get("should_escalate", False),
                     json.dumps([r.value for r in state.get("escalation_reasons", [])]),
-                    json.dumps([
-                        c.__dict__ if hasattr(c, "__dict__") else str(c)
-                        for c in state.get("citations", [])
-                    ]),
+                    json.dumps([c.__dict__ if hasattr(c, "__dict__") else str(c) for c in state.get("citations", [])]),
                     state.get("total_tokens", 0),
                 ),
             )
@@ -169,6 +167,7 @@ async def _output_node_with_conn(
 
 
 # ─── Graph Builder ────────────────────────────────────────────────────────────
+
 
 def build_investigation_graph(
     conn: psycopg.AsyncConnection[Any],
@@ -186,7 +185,7 @@ def build_investigation_graph(
     graph.add_node("planner", planner_node)
     graph.add_node("executor", _executor_with_conn)
     graph.add_node("critic", critic_node)
-    graph.add_node("challenger", challenger_node)   # adversarial multi-agent validation
+    graph.add_node("challenger", challenger_node)  # adversarial multi-agent validation
     graph.add_node("uncertainty_gate", uncertainty_gate_node)
     graph.add_node("escalate", escalate_node)
     graph.add_node("output", _output_with_conn)
@@ -222,6 +221,7 @@ def build_investigation_graph(
 
 
 # ─── High-level entry point ───────────────────────────────────────────────────
+
 
 async def investigate_anomaly(
     alert: AnomalyAlert,
@@ -299,17 +299,13 @@ async def investigate_anomaly(
     well = alert.well_id
     sev = alert.severity.value
     investigation_duration.labels(well_id=well, severity=sev).observe(elapsed_ms / 1000)
-    confidence_score_histogram.labels(
-        severity=sev, escalated=str(result.should_escalate).lower()
-    ).observe(result.confidence_score)
-    tokens_used_counter.labels(model=settings.openai_model, agent="pipeline").inc(
-        result.total_tokens_used
+    confidence_score_histogram.labels(severity=sev, escalated=str(result.should_escalate).lower()).observe(
+        result.confidence_score
     )
+    tokens_used_counter.labels(model=settings.openai_model, agent="pipeline").inc(result.total_tokens_used)
     if result.should_escalate:
         for reason in result.escalation_reasons:
-            escalation_counter.labels(
-                reason=reason.value, risk_level=result.risk_level.value
-            ).inc()
+            escalation_counter.labels(reason=reason.value, risk_level=result.risk_level.value).inc()
 
     return result
 

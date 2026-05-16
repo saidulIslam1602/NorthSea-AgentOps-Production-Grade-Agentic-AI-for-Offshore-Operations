@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 import psycopg
 from fastapi import APIRouter, HTTPException, status
@@ -66,9 +65,9 @@ async def query_knowledge_base(request: RAGQueryRequest) -> RAGQueryResponse:
 
     return RAGQueryResponse(
         query=request.query,
-        answer_context="\n\n".join(
-            c["content"] for c in result["raw_chunks"]
-        ) if result["raw_chunks"] else "No relevant content found.",
+        answer_context="\n\n".join(c["content"] for c in result["raw_chunks"])
+        if result["raw_chunks"]
+        else "No relevant content found.",
         citations=result["citations"],
         source_coverage=result["source_coverage"],
         weak_evidence=result["weak_evidence"],

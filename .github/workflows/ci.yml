@@ -179,7 +179,7 @@ jobs:
 
           # Primary gate (requires sub-daily data):
           gate_pass_full = event_recall >= 0.85 and day_fpr <= 0.20
-          # Daily-data override gate (documented in ADR-006):
+          # Daily-data override gate (matches README model promotion policy for daily granularity)
           gate_pass_daily = event_recall >= 0.60
 
           print(f"Quality Gate Results:")
@@ -189,7 +189,7 @@ jobs:
           if gate_pass_full:
               print("RESULT: PASS (full production gate) → eligible for Production stage")
           elif gate_pass_daily:
-              print("RESULT: PASS (daily-data override per ADR-006) → Staging stage")
+              print("RESULT: PASS (daily-data override per README rules) → Staging stage")
               print("  NOTE: Full Production gate requires sub-daily SCADA data.")
           else:
               print("RESULT: FAIL — event_recall below minimum threshold")

@@ -19,7 +19,6 @@ Usage (in Kafka consumer or API route):
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
 import mlflow.pyfunc
 import pandas as pd
@@ -55,7 +54,7 @@ class DetectorRegistry:
         self._tracking_uri = tracking_uri
         self._models: dict[str, mlflow.pyfunc.PyFuncModel] = {}
 
-    def load_all(self, wells: Optional[list[str]] = None) -> dict[str, str]:
+    def load_all(self, wells: list[str] | None = None) -> dict[str, str]:
         """
         Load Production (or Staging) model for each well.
 
@@ -80,11 +79,11 @@ class DetectorRegistry:
         logger.info("DetectorRegistry loaded %d/%d models", len(loaded), len(targets))
         return loaded
 
-    def get(self, well_id: str) -> Optional[mlflow.pyfunc.PyFuncModel]:
+    def get(self, well_id: str) -> mlflow.pyfunc.PyFuncModel | None:
         """Return the loaded model for a well, or None if not loaded."""
         return self._models.get(well_id)
 
-    def predict(self, well_id: str, reading: dict) -> Optional[pd.DataFrame]:
+    def predict(self, well_id: str, reading: dict) -> pd.DataFrame | None:
         """
         Score a single telemetry reading for a well.
 

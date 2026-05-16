@@ -10,11 +10,9 @@ Returns results with:
 from __future__ import annotations
 
 import logging
-import math
 from typing import Any
 
 import psycopg
-from rank_bm25 import BM25Okapi
 
 from src.config import get_settings
 from src.rag.vectorstore import semantic_search
@@ -148,7 +146,7 @@ async def retrieve(
     top_chunks = [c for c in fused if c["relevance_score"] >= min_sim][:k]
 
     if not top_chunks:
-        top_chunks = fused[:min(3, len(fused))]
+        top_chunks = fused[: min(3, len(fused))]
 
     coverage = _compute_coverage(query, top_chunks)
     weak_evidence = coverage < settings.rag_similarity_threshold

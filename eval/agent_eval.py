@@ -26,6 +26,7 @@ import logging
 import sys
 import time
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -43,7 +44,7 @@ PLAN_QUALITY_CASES: list[dict[str, Any]] = [
         "features": ["oil_rate_bopd", "motor_current_amps"],
         "severity": "HIGH",
         "description": "ESP motor trip — overtemperature with high motor current",
-        "required_first_tool": "query_timeseries",   # must look at telemetry first
+        "required_first_tool": "query_timeseries",  # must look at telemetry first
         "required_tools": ["query_timeseries", "retrieve_documents"],
         "forbidden_tools": [],
         "expected_step_count_min": 3,
@@ -173,6 +174,7 @@ ESCALATION_GROUND_TRUTH: list[dict[str, Any]] = [
 
 # ── Data classes ──────────────────────────────────────────────────────────────
 
+
 @dataclass
 class PlanQualityResult:
     case_id: str
@@ -215,21 +217,28 @@ class AgentEvalReport:
 
 # ── Plan quality evaluation (LLM-based, mocked in CI) ────────────────────────
 
+
 def _mock_plan_for_case(case: dict[str, Any]) -> list[dict[str, Any]]:
     """
     Generate a mock plan for a test case (used in CI without LLM).
 
     Uses the rule-based fallback planner logic — deterministic, no API key needed.
     """
+    from datetime import UTC, datetime
+
     from src.agents.planner import _fallback_plan
     from src.schemas.domain import AnomalyAlert, SeverityLevel
 
     alert = AnomalyAlert(
+        timestamp=datetime.now(UTC),
         well_id="15/9-F-4",
         field_name="Volve",
         severity=SeverityLevel(case["severity"]),
         anomaly_score=0.8,
         affected_features=case["features"],
+        baseline_values={},
+        current_values={},
+        deviation_pct={},
         description=case["description"],
     )
     return _fallback_plan(alert)
@@ -250,6 +259,7 @@ def evaluate_plan_quality(
     Returns:
         List of PlanQualityResult with per-case scores.
     """
+    _ = use_llm  # Reserved for wiring real LLM evaluation in offline runs.
     if cases is None:
         cases = PLAN_QUALITY_CASES
 
@@ -261,47 +271,43 @@ def evaluate_plan_quality(
         step_count = len(plan_steps)
 
         # Metric 1: first tool must be correct
-        first_tool_correct = (
-            tools_generated[0] == case["required_first_tool"] if tools_generated else False
-        )
+        first_tool_correct = tools_generated[0] == case["required_first_tool"] if tools_generated else False
 
         # Metric 2: all required tools must appear somewhere in the plan
-        required_covered = all(
-            t in tools_generated for t in case["required_tools"]
-        )
+        required_covered = all(t in tools_generated for t in case["required_tools"])
 
         # Metric 3: step count in expected range
-        count_in_range = (
-            case["expected_step_count_min"] <= step_count <= case["expected_step_count_max"]
-        )
+        count_in_range = case["expected_step_count_min"] <= step_count <= case["expected_step_count_max"]
 
         # Composite score: weighted
-        score = (
-            0.4 * float(first_tool_correct)
-            + 0.4 * float(required_covered)
-            + 0.2 * float(count_in_range)
-        )
+        score = 0.4 * float(first_tool_correct) + 0.4 * float(required_covered) + 0.2 * float(count_in_range)
 
-        results.append(PlanQualityResult(
-            case_id=case["id"],
-            anomaly_type=case["anomaly_type"],
-            tools_generated=tools_generated,
-            step_count=step_count,
-            first_tool_correct=first_tool_correct,
-            required_tools_covered=required_covered,
-            step_count_in_range=count_in_range,
-            score=score,
-        ))
+        results.append(
+            PlanQualityResult(
+                case_id=case["id"],
+                anomaly_type=case["anomaly_type"],
+                tools_generated=tools_generated,
+                step_count=step_count,
+                first_tool_correct=first_tool_correct,
+                required_tools_covered=required_covered,
+                step_count_in_range=count_in_range,
+                score=score,
+            )
+        )
 
         logger.debug(
             "Plan quality %s: score=%.2f, first_tool=%s, coverage=%s",
-            case["id"], score, first_tool_correct, required_covered,
+            case["id"],
+            score,
+            first_tool_correct,
+            required_covered,
         )
 
     return results
 
 
 # ── Escalation evaluation (deterministic — no LLM) ───────────────────────────
+
 
 def evaluate_escalation(
     cases: list[dict[str, Any]] | None = None,
@@ -318,6 +324,8 @@ def evaluate_escalation(
     if cases is None:
         cases = ESCALATION_GROUND_TRUTH
 
+    _ = confidence_threshold
+
     results: list[EscalationEvalResult] = []
 
     for case in cases:
@@ -325,11 +333,15 @@ def evaluate_escalation(
         confidence = float(case["confidence_score"])
 
         alert = AnomalyAlert(
+            timestamp=datetime.now(UTC),
             well_id="EVAL-WELL",
             field_name="EVAL-FIELD",
             severity=SeverityLevel.HIGH if risk_level in (RiskLevel.HIGH, RiskLevel.CRITICAL) else SeverityLevel.MEDIUM,
             anomaly_score=1.0 - confidence,
             affected_features=["test"],
+            baseline_values={},
+            current_values={},
+            deviation_pct={},
             description=case["description"],
         )
 
@@ -345,19 +357,22 @@ def evaluate_escalation(
         expected = case["should_escalate_expected"]
         correct = predicted_escalate == expected
 
-        results.append(EscalationEvalResult(
-            case_id=case["id"],
-            predicted_escalate=predicted_escalate,
-            expected_escalate=expected,
-            correct=correct,
-            confidence_score=confidence,
-            risk_level=case["risk_level"],
-        ))
+        results.append(
+            EscalationEvalResult(
+                case_id=case["id"],
+                predicted_escalate=predicted_escalate,
+                expected_escalate=expected,
+                correct=correct,
+                confidence_score=confidence,
+                risk_level=case["risk_level"],
+            )
+        )
 
     return results
 
 
 # ── Full eval runner ──────────────────────────────────────────────────────────
+
 
 def run_agent_eval(
     output_path: Path | None = None,
@@ -367,8 +382,6 @@ def run_agent_eval(
     from eval.calibration import (
         compute_brier_score,
         compute_ece,
-        compute_escalation_calibration,
-        log_calibration_to_mlflow,
     )
 
     start = time.monotonic()
@@ -384,15 +397,14 @@ def run_agent_eval(
     report.plan_quality_score = sum(r.score for r in plan_results) / len(plan_results)
     for r in plan_results:
         status = "PASS" if r.score >= 0.8 else "FAIL"
-        print(f"  {status} {r.case_id} ({r.anomaly_type}): score={r.score:.2f}, "
-              f"tools={r.tools_generated}")
+        print(f"  {status} {r.case_id} ({r.anomaly_type}): score={r.score:.2f}, tools={r.tools_generated}")
 
     # 2. Escalation evaluation
     print("\n[2/3] Escalation Gate...")
     esc_results = evaluate_escalation()
     report.escalation_results = esc_results
 
-    correct = [r.correct for r in esc_results]
+    [r.correct for r in esc_results]
     tp = sum(1 for r in esc_results if r.predicted_escalate and r.expected_escalate)
     fp = sum(1 for r in esc_results if r.predicted_escalate and not r.expected_escalate)
     fn = sum(1 for r in esc_results if not r.predicted_escalate and r.expected_escalate)
@@ -409,15 +421,14 @@ def run_agent_eval(
 
     for r in esc_results:
         status = "PASS" if r.correct else "FAIL"
-        print(f"  {status} {r.case_id}: predicted={r.predicted_escalate}, "
-              f"expected={r.expected_escalate}")
+        print(f"  {status} {r.case_id}: predicted={r.predicted_escalate}, expected={r.expected_escalate}")
     print(f"  Precision={precision:.3f}, Recall={recall:.3f}, F1={f1:.3f}, Miss={miss_rate:.3f}")
     if miss_rate > 0.1:
         print(f"  WARNING: Miss rate {miss_rate:.1%} > 10% — risk of missed escalations")
 
     # 3. Calibration
     print("\n[3/3] Confidence Calibration (ECE)...")
-    from eval.calibration import CALIBRATION_VALIDATION_CASES, compute_ece, compute_brier_score
+    from eval.calibration import CALIBRATION_VALIDATION_CASES
 
     confidences = [c["confidence"] for c in CALIBRATION_VALIDATION_CASES]
     correct_cal = [c["correct"] for c in CALIBRATION_VALIDATION_CASES]
@@ -440,13 +451,10 @@ def run_agent_eval(
     n_plan = len(plan_results)
     n_esc = len(esc_results)
     report.total_cases = n_plan + n_esc
-    report.passed = (
-        sum(1 for r in plan_results if r.score >= 0.8)
-        + sum(1 for r in esc_results if r.correct)
-    )
+    report.passed = sum(1 for r in plan_results if r.score >= 0.8) + sum(1 for r in esc_results if r.correct)
     report.failed = report.total_cases - report.passed
 
-    print(f"\n=== Summary ===")
+    print("\n=== Summary ===")
     print(f"Plan Quality Score: {report.plan_quality_score:.3f}/1.000")
     print(f"Escalation F1: {f1:.3f} (recall={recall:.3f})")
     print(f"Calibration ECE: {cal_result.ece:.4f} ({cal_result.calibration_grade})")
@@ -455,6 +463,7 @@ def run_agent_eval(
     # Log to MLflow
     try:
         import mlflow
+
         mlflow.set_experiment(mlflow_experiment)
         with mlflow.start_run(run_name="agent-eval"):
             mlflow.log_metric("plan_quality_score", report.plan_quality_score)
@@ -509,6 +518,7 @@ def run_agent_eval(
 
 def main() -> None:
     import argparse
+
     logging.basicConfig(level=logging.INFO)
     parser = argparse.ArgumentParser(description="Run agent-level evaluation")
     parser.add_argument("--output", default="eval/agent_eval_results.json")

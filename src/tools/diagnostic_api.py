@@ -8,7 +8,6 @@ real SCADA system APIs, asset management systems, or well databases.
 from __future__ import annotations
 
 import logging
-from datetime import datetime
 from typing import Any
 
 import psycopg
@@ -138,9 +137,8 @@ async def get_equipment_status(
         for row in rows
     ]
 
-    summary = (
-        f"Found {len(records)} maintenance records for {well_id}: "
-        + "; ".join(r["title"][:60] for r in records[:3])
+    summary = f"Found {len(records)} maintenance records for {well_id}: " + "; ".join(
+        r["title"][:60] for r in records[:3]
     )
 
     return {

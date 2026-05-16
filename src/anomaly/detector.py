@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import logging
 from collections import deque
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import numpy as np
@@ -72,14 +72,12 @@ class WellAnomalyDetector:
     def _buffer_df(self) -> pd.DataFrame:
         return pd.DataFrame(list(self._buffer))[TELEMETRY_FEATURES]
 
-    def _compute_zscore(
-        self, reading: dict[str, float]
-    ) -> dict[str, float]:
+    def _compute_zscore(self, reading: dict[str, float]) -> dict[str, float]:
         """Compute Z-scores for each feature over the recent rolling window."""
         if len(self._buffer) < self.zscore_window:
-            return {f: 0.0 for f in TELEMETRY_FEATURES}
+            return dict.fromkeys(TELEMETRY_FEATURES, 0.0)
 
-        window_data = list(self._buffer)[-self.zscore_window:]
+        window_data = list(self._buffer)[-self.zscore_window :]
         df = pd.DataFrame(window_data)[TELEMETRY_FEATURES]
 
         means = df.mean()
@@ -102,13 +100,13 @@ class WellAnomalyDetector:
         if len(df) < 20:
             return
 
-        X = self._scaler.fit_transform(df.values)
+        scaled_rows = self._scaler.fit_transform(df.values)
         self._iso_forest = IsolationForest(
             contamination=IF_CONTAMINATION,
             n_estimators=100,
             random_state=42,
         )
-        self._iso_forest.fit(X)
+        self._iso_forest.fit(scaled_rows)
         self._is_trained = True
         self._readings_since_retrain = 0
         logger.debug("Isolation Forest retrained on %d samples for %s", len(df), self.well_id)
@@ -126,9 +124,7 @@ class WellAnomalyDetector:
         anomaly_score = max(0.0, min(1.0, (-raw_score + 0.3) / 0.6))
         return float(anomaly_score)
 
-    def _classify_severity(
-        self, max_zscore: float, if_score: float
-    ) -> SeverityLevel:
+    def _classify_severity(self, max_zscore: float, if_score: float) -> SeverityLevel:
         """Classify severity from combined Z-score and IF score."""
         combined = max(max_zscore / 6.0, if_score)  # normalise Z-score to ~0-1
 
@@ -146,15 +142,10 @@ class WellAnomalyDetector:
 
         Returns an AnomalyAlert if an anomaly is detected, else None.
         """
-        clean: dict[str, float] = {
-            f: float(reading.get(f, 0.0)) for f in TELEMETRY_FEATURES
-        }
+        clean: dict[str, float] = {f: float(reading.get(f, 0.0)) for f in TELEMETRY_FEATURES}
 
         zscores = self._compute_zscore(clean)
-        affected_features = [
-            f for f, z in zscores.items()
-            if z >= ZSCORE_THRESHOLDS[SeverityLevel.LOW]
-        ]
+        affected_features = [f for f, z in zscores.items() if z >= ZSCORE_THRESHOLDS[SeverityLevel.LOW]]
 
         # Update buffer AFTER computing Z-scores (don't contaminate baseline)
         self._buffer.append(clean)
@@ -188,9 +179,7 @@ class WellAnomalyDetector:
         deviation_pct = {}
         for f in affected_features:
             if baseline_values.get(f, 0) != 0:
-                deviation_pct[f] = round(
-                    100 * (clean[f] - baseline_values[f]) / abs(baseline_values[f]), 1
-                )
+                deviation_pct[f] = round(100 * (clean[f] - baseline_values[f]) / abs(baseline_values[f]), 1)
 
         description = _build_description(
             well_id=reading.get("well_id", self.well_id),
@@ -201,7 +190,7 @@ class WellAnomalyDetector:
         )
 
         return AnomalyAlert(
-            timestamp=reading.get("timestamp", datetime.utcnow()),
+            timestamp=reading.get("timestamp", datetime.now(UTC)),
             well_id=reading.get("well_id", self.well_id),
             field_name=reading.get("field_name", "Unknown"),
             severity=severity,
@@ -222,10 +211,7 @@ def _build_description(
     current_values: dict[str, float],
 ) -> str:
     """Build a human-readable anomaly description."""
-    feature_desc = ", ".join(
-        f"{f.replace('_', ' ')} ({deviation_pct.get(f, 0):+.1f}%)"
-        for f in affected_features
-    )
+    feature_desc = ", ".join(f"{f.replace('_', ' ')} ({deviation_pct.get(f, 0):+.1f}%)" for f in affected_features)
 
     domain_hints: list[str] = []
     if "water_cut_pct" in affected_features and deviation_pct.get("water_cut_pct", 0) > 0:
@@ -242,7 +228,4 @@ def _build_description(
 
     hint_str = f" Possible causes: {'; '.join(domain_hints)}." if domain_hints else ""
 
-    return (
-        f"{severity.value} anomaly on {well_id}: "
-        f"abnormal {feature_desc}.{hint_str}"
-    )
+    return f"{severity.value} anomaly on {well_id}: abnormal {feature_desc}.{hint_str}"

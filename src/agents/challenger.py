@@ -98,6 +98,7 @@ set requires_human_review=true and lower confidence below the Critic's score."""
 
 # ── Challenge activation logic ────────────────────────────────────────────────
 
+
 def should_invoke_challenger(
     critic_confidence: float,
     risk_level: RiskLevel,
@@ -112,14 +113,11 @@ def should_invoke_challenger(
       - critic_confidence < 0.80 (Critic is uncertain; challenger may clarify)
       - evidence_count < 2 (sparse evidence; adversarial check catches overconfidence)
     """
-    return (
-        risk_level in (RiskLevel.HIGH, RiskLevel.CRITICAL)
-        or critic_confidence < 0.80
-        or evidence_count < 2
-    )
+    return risk_level in (RiskLevel.HIGH, RiskLevel.CRITICAL) or critic_confidence < 0.80 or evidence_count < 2
 
 
 # ── Challenger agent ──────────────────────────────────────────────────────────
+
 
 async def run_challenger(
     alert: AnomalyAlert,
@@ -150,10 +148,9 @@ async def run_challenger(
     )
 
     evidence_text = "\n\n".join(evidence[:6]) if evidence else "No evidence collected."
-    citation_text = "\n".join(
-        f"- [{c.document_title}]: {c.excerpt[:120]}"
-        for c in citations[:5]
-    ) if citations else "No citations."
+    citation_text = (
+        "\n".join(f"- [{c.document_title}]: {c.excerpt[:120]}" for c in citations[:5]) if citations else "No citations."
+    )
 
     critic_hypothesis = critic_review.get("root_cause_hypothesis", "Not provided")
     critic_actions = critic_review.get("recommended_actions", [])
@@ -201,12 +198,14 @@ Challenge the Critic's conclusion. Look for what was missed."""
         challenge = json.loads(content)
         tokens = response.usage_metadata.get("total_tokens", 0) if response.usage_metadata else 0
 
-        step_record.update({
-            "output": f"agreement={challenge.get('agreement_level')}, "
-                      f"competing_conf={challenge.get('competing_confidence_score', 0):.2f}",
-            "tokens": tokens,
-            "success": True,
-        })
+        step_record.update(
+            {
+                "output": f"agreement={challenge.get('agreement_level')}, "
+                f"competing_conf={challenge.get('competing_confidence_score', 0):.2f}",
+                "tokens": tokens,
+                "success": True,
+            }
+        )
 
         logger.info(
             "Challenger reviewed %s: agreement=%s, alt_hypotheses=%d",
@@ -241,6 +240,7 @@ Challenge the Critic's conclusion. Look for what was missed."""
 
 
 # ── Reconciler ────────────────────────────────────────────────────────────────
+
 
 async def run_reconciler(
     alert: AnomalyAlert,
@@ -332,6 +332,7 @@ Reconcile these two positions into a final assessment."""
 
 # ── LangGraph node entry point ────────────────────────────────────────────────
 
+
 async def run_challenger_node(state: dict[str, Any]) -> dict[str, Any]:
     """
     LangGraph node: Challenger + Reconciler pass.
@@ -352,13 +353,17 @@ async def run_challenger_node(state: dict[str, Any]) -> dict[str, Any]:
     if not should_invoke_challenger(critic_confidence, risk_level, len(evidence)):
         logger.info(
             "Challenger skipped for %s (confidence=%.2f, risk=%s) — within acceptable threshold",
-            alert.well_id, critic_confidence, risk_level.value,
+            alert.well_id,
+            critic_confidence,
+            risk_level.value,
         )
         return {}  # no-op: state unchanged
 
     logger.info(
         "Invoking Challenger for %s (confidence=%.2f, risk=%s)",
-        alert.well_id, critic_confidence, risk_level.value,
+        alert.well_id,
+        critic_confidence,
+        risk_level.value,
     )
 
     # 1. Run Challenger
@@ -404,6 +409,7 @@ async def run_challenger_node(state: dict[str, Any]) -> dict[str, Any]:
     # If Reconciler demands human review, force escalation
     if reconciled.get("requires_human_review"):
         from src.schemas.domain import EscalationReason
+
         existing_reasons = list(state.get("escalation_reasons", []))
         if EscalationReason.LOW_CONFIDENCE not in existing_reasons:
             existing_reasons.append(EscalationReason.LOW_CONFIDENCE)
@@ -411,7 +417,8 @@ async def run_challenger_node(state: dict[str, Any]) -> dict[str, Any]:
         updates["should_escalate"] = True
         logger.warning(
             "Reconciler requires human review for %s: %s",
-            alert.well_id, reconciled.get("human_review_reason"),
+            alert.well_id,
+            reconciled.get("human_review_reason"),
         )
 
     return updates

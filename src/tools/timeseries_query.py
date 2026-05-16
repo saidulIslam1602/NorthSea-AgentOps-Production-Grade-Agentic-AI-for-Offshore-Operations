@@ -8,7 +8,7 @@ Returns a formatted summary including trend analysis and statistical profile.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import numpy as np
@@ -21,8 +21,12 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 TELEMETRY_FEATURES = [
-    "oil_rate_bopd", "water_cut_pct", "gas_oil_ratio",
-    "bhp_psi", "wh_temp_f", "choke_64ths",
+    "oil_rate_bopd",
+    "water_cut_pct",
+    "gas_oil_ratio",
+    "bhp_psi",
+    "wh_temp_f",
+    "choke_64ths",
 ]
 
 
@@ -45,7 +49,7 @@ async def query_timeseries(
             "summary_text": str (human-readable summary for LLM context),
         }
     """
-    end = end_time or datetime.now(timezone.utc)
+    end = end_time or datetime.now(UTC)
     start = end - timedelta(hours=hours_back)
 
     async with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
@@ -81,8 +85,8 @@ async def query_timeseries(
         arr = np.array(values)
         # Trend: % change from first 10% to last 10% of the window
         n = len(arr)
-        early_mean = np.mean(arr[:max(1, n // 10)])
-        late_mean = np.mean(arr[max(0, -n // 10):])
+        early_mean = np.mean(arr[: max(1, n // 10)])
+        late_mean = np.mean(arr[max(0, -n // 10) :])
         trend_pct = ((late_mean - early_mean) / abs(early_mean) * 100) if early_mean != 0 else 0.0
 
         statistics[feat] = {
@@ -118,11 +122,13 @@ def _find_gaps(timestamps: list[datetime], expected_gap_hours: int = 2) -> list[
     for i in range(1, len(timestamps)):
         delta = (timestamps[i] - timestamps[i - 1]).total_seconds() / 3600
         if delta > expected_gap_hours:
-            gaps.append({
-                "from": timestamps[i - 1].isoformat(),
-                "to": timestamps[i].isoformat(),
-                "duration_hours": round(delta, 1),
-            })
+            gaps.append(
+                {
+                    "from": timestamps[i - 1].isoformat(),
+                    "to": timestamps[i].isoformat(),
+                    "duration_hours": round(delta, 1),
+                }
+            )
     return gaps[:10]  # cap at 10 gaps
 
 
@@ -133,7 +139,12 @@ def _build_summary_text(
     n_records: int,
     completeness: float,
 ) -> str:
-    lines = [f"Telemetry summary for {well_id} over the last {hours} hours ({n_records} readings, {completeness:.0%} complete):"]
+    lines = [
+        (
+            f"Telemetry summary for {well_id} over the last {hours} hours "
+            f"({n_records} readings, {completeness:.0%} complete):"
+        )
+    ]
 
     for feat, s in stats.items():
         trend_dir = "▲" if s["trend_pct"] > 2 else ("▼" if s["trend_pct"] < -2 else "→")

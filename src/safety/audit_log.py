@@ -177,7 +177,7 @@ class TimedStep:
     def set_input(self, text: str) -> None:
         self._input = text
 
-    def __enter__(self) -> "TimedStep":
+    def __enter__(self) -> TimedStep:
         self._start = time.monotonic()
         return self
 

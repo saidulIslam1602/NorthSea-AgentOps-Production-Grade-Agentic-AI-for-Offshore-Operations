@@ -20,9 +20,7 @@ class Settings(BaseSettings):
     openai_embedding_model: str = Field("text-embedding-3-small", description="Embedding model")
 
     # ─── Database ─────────────────────────────────────────────────────────────
-    database_url: str = Field(
-        "postgresql+psycopg://northsea:northsea_dev@localhost:5432/northsea_agentops"
-    )
+    database_url: str = Field("postgresql+psycopg://northsea:northsea_dev@localhost:5432/northsea_agentops")
     database_pool_size: int = Field(10)
     database_max_overflow: int = Field(20)
 

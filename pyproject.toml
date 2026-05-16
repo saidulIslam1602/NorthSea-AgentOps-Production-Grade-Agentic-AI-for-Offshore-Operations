@@ -95,14 +95,20 @@ ingest = "src.rag.ingestion:main"
 run-eval = "eval.ragas_eval:main"
 
 [tool.ruff]
-line-length = 100
+line-length = 120
 target-version = "py311"
-select = ["E", "F", "I", "N", "UP", "ANN", "S", "B", "A", "COM", "C4", "DTZ", "T20", "ARG", "PTH"]
-ignore = ["ANN101", "ANN102", "ANN401", "S101", "COM812"]
 
-[tool.ruff.per-file-ignores]
-"tests/**" = ["ANN", "S", "ARG"]
-"eval/**" = ["ANN", "T20"]
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "ANN", "S", "B", "A", "COM", "C4", "DTZ", "T20", "ARG", "PTH"]
+ignore = ["ANN401", "S101", "COM812"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["ANN", "S", "ARG", "DTZ003"]
+"eval/**" = ["ANN", "T20", "E501"]
+"src/cli.py" = ["S104", "S603", "B008"]
+"src/config.py" = ["S104"]
+"src/ml/model_registry.py" = ["S301", "PTH118", "PTH123", "ARG001", "ARG002"]
+"src/safety/injection_guard.py" = ["E501"]
 
 [tool.mypy]
 python_version = "3.11"

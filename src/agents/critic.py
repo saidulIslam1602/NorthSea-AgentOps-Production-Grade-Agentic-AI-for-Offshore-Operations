@@ -21,7 +21,6 @@ from typing import Any
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
-from src.agents.state import AgentState
 from src.config import get_settings
 from src.schemas.domain import AnomalyAlert, Citation, RiskLevel
 
@@ -75,21 +74,23 @@ def _build_critic_prompt(
     plan_steps: list[dict[str, Any]],
 ) -> str:
     evidence_text = "\n\n".join(evidence) if evidence else "No evidence collected."
-    citation_text = "\n".join(
-        f"- [{c.document_title}] (relevance: {c.relevance_score:.2f}): {c.excerpt[:150]}"
-        for c in citations[:8]
-    ) if citations else "No document citations."
+    citation_text = (
+        "\n".join(
+            f"- [{c.document_title}] (relevance: {c.relevance_score:.2f}): {c.excerpt[:150]}" for c in citations[:8]
+        )
+        if citations
+        else "No document citations."
+    )
 
     completed_steps = [s for s in plan_steps if s.get("completed")]
     steps_summary = "\n".join(
-        f"Step {s['step_id']}: {s['description']} → {(s.get('result') or '')[:200]}"
-        for s in completed_steps
+        f"Step {s['step_id']}: {s['description']} → {(s.get('result') or '')[:200]}" for s in completed_steps
     )
 
     return f"""ANOMALY ALERT:
 Well: {alert.well_id} | Field: {alert.field_name}
 Severity: {alert.severity.value} | Score: {alert.anomaly_score:.3f}
-Affected features: {', '.join(alert.affected_features)}
+Affected features: {", ".join(alert.affected_features)}
 Deviations: {json.dumps(alert.deviation_pct)}
 Alert description: {alert.description}
 
@@ -153,31 +154,30 @@ async def run_critic(state: dict[str, Any]) -> dict[str, Any]:
             risk_level = RiskLevel.MEDIUM
 
         # Compute average source coverage from evidence step records
-        coverage_values = [
-            s.get("source_coverage", 1.0)
-            for s in agent_steps
-            if "source_coverage" in s
-        ]
-        evidence_coverage = (
-            sum(coverage_values) / len(coverage_values) if coverage_values else 0.5
-        )
+        coverage_values = [s.get("source_coverage", 1.0) for s in agent_steps if "source_coverage" in s]
+        evidence_coverage = sum(coverage_values) / len(coverage_values) if coverage_values else 0.5
 
         # Penalise confidence if there are major gaps
         gaps: list[str] = review.get("logical_gaps", [])
         if len(gaps) >= 3:
             confidence_score = max(0.1, confidence_score - 0.15)
 
-        step_record.update({
-            "output": f"confidence={confidence_score:.2f}, risk={risk_level.value}",
-            "tokens": tokens,
-            "success": True,
-        })
+        step_record.update(
+            {
+                "output": f"confidence={confidence_score:.2f}, risk={risk_level.value}",
+                "tokens": tokens,
+                "success": True,
+            }
+        )
 
         recommendation = review.get("root_cause_hypothesis", "Root cause undetermined.")
 
         logger.info(
             "Critic scored %s: confidence=%.2f, risk=%s, gaps=%d",
-            alert.well_id, confidence_score, risk_level.value, len(gaps)
+            alert.well_id,
+            confidence_score,
+            risk_level.value,
+            len(gaps),
         )
 
         return {
@@ -190,8 +190,8 @@ async def run_critic(state: dict[str, Any]) -> dict[str, Any]:
             "messages": [
                 HumanMessage(
                     content=f"Critic review complete. Confidence: {confidence_score:.2f}, "
-                            f"Risk: {risk_level.value}. "
-                            f"Root cause: {recommendation[:100]}"
+                    f"Risk: {risk_level.value}. "
+                    f"Root cause: {recommendation[:100]}"
                 )
             ],
             # Store full review in evidence for audit

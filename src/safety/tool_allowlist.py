@@ -8,49 +8,61 @@ Any attempt by an agent to call an unlisted tool is blocked and logged.
 
 from __future__ import annotations
 
-from typing import FrozenSet
-
-AGENT_TOOL_PERMISSIONS: dict[str, FrozenSet[str]] = {
-    "planner": frozenset({
-        # Planner generates plans but does NOT call tools directly
-    }),
-    "executor": frozenset({
-        "query_timeseries",
-        "retrieve_documents",
-        "query_similar_incidents",
-        "get_well_metadata",
-        "get_equipment_status",
-    }),
-    "critic": frozenset({
-        # Critic reviews evidence already collected — no tool calls
-    }),
-    "uncertainty_gate": frozenset({
-        # Gate applies rules — no tool calls
-    }),
-    "escalation": frozenset({
-        "create_escalation",
-        "notify_engineer",
-    }),
+AGENT_TOOL_PERMISSIONS: dict[str, frozenset[str]] = {
+    "planner": frozenset(
+        {
+            # Planner generates plans but does NOT call tools directly
+        }
+    ),
+    "executor": frozenset(
+        {
+            "query_timeseries",
+            "retrieve_documents",
+            "query_similar_incidents",
+            "get_well_metadata",
+            "get_equipment_status",
+        }
+    ),
+    "critic": frozenset(
+        {
+            # Critic reviews evidence already collected — no tool calls
+        }
+    ),
+    "uncertainty_gate": frozenset(
+        {
+            # Gate applies rules — no tool calls
+        }
+    ),
+    "escalation": frozenset(
+        {
+            "create_escalation",
+            "notify_engineer",
+        }
+    ),
 }
 
 # Tools that require explicit human approval before execution
-HUMAN_APPROVAL_REQUIRED: FrozenSet[str] = frozenset({
-    "modify_choke",
-    "adjust_gaslift_rate",
-    "initiate_esd",
-    "restart_esp",
-    "modify_chemical_injection",
-    "notify_psa",
-})
+HUMAN_APPROVAL_REQUIRED: frozenset[str] = frozenset(
+    {
+        "modify_choke",
+        "adjust_gaslift_rate",
+        "initiate_esd",
+        "restart_esp",
+        "modify_chemical_injection",
+        "notify_psa",
+    }
+)
 
 # Tools completely blocked in all contexts
-BLOCKED_TOOLS: FrozenSet[str] = frozenset({
-    "execute_shell",
-    "write_file",
-    "delete_record",
-    "modify_config",
-    "send_external_email",
-})
+BLOCKED_TOOLS: frozenset[str] = frozenset(
+    {
+        "execute_shell",
+        "write_file",
+        "delete_record",
+        "modify_config",
+        "send_external_email",
+    }
+)
 
 
 def is_tool_permitted(agent_id: str, tool_name: str) -> bool:
@@ -74,7 +86,7 @@ def get_permitted_tools(agent_id: str) -> list[str]:
 def validate_tool_call(
     agent_id: str,
     tool_name: str,
-    audit_logger: "AuditLogger | None" = None,  # noqa: F821
+    audit_logger: AuditLogger | None = None,  # noqa: F821
 ) -> tuple[bool, str]:
     """
     Validate a tool call, returning (is_permitted, reason).
@@ -89,10 +101,7 @@ def validate_tool_call(
 
     permitted = AGENT_TOOL_PERMISSIONS.get(agent_id, frozenset())
     if tool_name not in permitted:
-        reason = (
-            f"Agent '{agent_id}' is not permitted to call '{tool_name}'. "
-            f"Permitted: {sorted(permitted)}"
-        )
+        reason = f"Agent '{agent_id}' is not permitted to call '{tool_name}'. Permitted: {sorted(permitted)}"
         if audit_logger:
             audit_logger.log_blocked_tool_call(agent_id, tool_name, reason)
         return False, reason

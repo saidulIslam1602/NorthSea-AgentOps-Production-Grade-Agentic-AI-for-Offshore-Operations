@@ -10,7 +10,6 @@ Pattern: Plan-and-Execute executor node.
 
 from __future__ import annotations
 
-import json
 import logging
 from typing import Any
 
@@ -18,7 +17,6 @@ import psycopg
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
-from src.agents.state import AgentState
 from src.config import get_settings
 from src.schemas.domain import AnomalyAlert
 from src.tools.diagnostic_api import get_equipment_status, get_well_metadata
@@ -29,13 +27,15 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 # ─── Tool allowlist for Executor ─────────────────────────────────────────────
-EXECUTOR_ALLOWED_TOOLS = frozenset({
-    "query_timeseries",
-    "retrieve_documents",
-    "query_similar_incidents",
-    "get_well_metadata",
-    "get_equipment_status",
-})
+EXECUTOR_ALLOWED_TOOLS = frozenset(
+    {
+        "query_timeseries",
+        "retrieve_documents",
+        "query_similar_incidents",
+        "get_well_metadata",
+        "get_equipment_status",
+    }
+)
 
 EXECUTOR_SYSTEM_PROMPT = """You are a North Sea production operations engineer AI.
 Your task is to execute one investigation step and synthesise the tool results
@@ -71,9 +71,7 @@ async def _dispatch_tool(
             return await retrieve_documents(conn, step_description)
 
         elif tool_name == "query_similar_incidents":
-            return await query_similar_incidents(
-                conn, alert.description, alert.affected_features
-            )
+            return await query_similar_incidents(conn, alert.description, alert.affected_features)
 
         elif tool_name == "get_well_metadata":
             return await get_well_metadata(conn, alert.well_id)
@@ -132,7 +130,7 @@ async def run_executor(
         raw_text = f"Tool error: {tool_result['error']}"
 
     synthesis_prompt = f"""Investigation step: {step_desc}
-Expected output: {step.get('expected_output', '')}
+Expected output: {step.get("expected_output", "")}
 
 Tool output:
 {raw_text[:3000]}
@@ -149,7 +147,7 @@ Summarise the key findings relevant to this investigation step."""
         synthesis = response.content if isinstance(response.content, str) else str(response.content)
         tokens = response.usage_metadata.get("total_tokens", 0) if response.usage_metadata else 0
         total_tokens += tokens
-    except Exception as exc:
+    except Exception:
         logger.exception("Executor LLM synthesis failed")
         synthesis = raw_text[:500]
         tokens = 0
@@ -171,16 +169,17 @@ Summarise the key findings relevant to this investigation step."""
 
     evidence.append(f"Step {step['step_id']} ({step_desc}):\n{synthesis}")
 
-    step_record.update({
-        "output": synthesis[:200],
-        "tokens": tokens,
-        "source_coverage": step_coverage,
-        "success": "error" not in tool_result,
-    })
+    step_record.update(
+        {
+            "output": synthesis[:200],
+            "tokens": tokens,
+            "source_coverage": step_coverage,
+            "success": "error" not in tool_result,
+        }
+    )
 
     logger.info(
-        "Executor completed step %d/%d for %s: %s",
-        current_idx + 1, len(plan_steps), alert.well_id, synthesis[:80]
+        "Executor completed step %d/%d for %s: %s", current_idx + 1, len(plan_steps), alert.well_id, synthesis[:80]
     )
 
     return {

@@ -85,7 +85,8 @@ async def query_similar_incidents(
 
     # Filter specifically for incident reports and well performance reports
     incident_citations = [
-        c for c in result["citations"]
+        c
+        for c in result["citations"]
         if any(
             keyword in (c.document_title + c.document_type).lower()
             for keyword in ["incident", "investigation", "failure", "upset", "anomaly"]

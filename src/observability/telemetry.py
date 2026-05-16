@@ -44,11 +44,13 @@ def setup_telemetry(app: Any) -> None:
     """Configure OpenTelemetry tracing and metrics, instrument FastAPI."""
     global _tracer, _meter
 
-    resource = Resource.create({
-        "service.name": settings.otel_service_name,
-        "service.version": "0.1.0",
-        "deployment.environment": settings.app_env,
-    })
+    resource = Resource.create(
+        {
+            "service.name": settings.otel_service_name,
+            "service.version": "0.1.0",
+            "deployment.environment": settings.app_env,
+        }
+    )
 
     # ─── Tracing ──────────────────────────────────────────────────────────────
     tracer_provider = TracerProvider(resource=resource)

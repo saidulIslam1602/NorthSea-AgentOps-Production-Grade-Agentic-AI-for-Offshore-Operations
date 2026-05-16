@@ -75,9 +75,11 @@ RULES:
 
 # ── Data structures ───────────────────────────────────────────────────────────
 
+
 @dataclass
 class ReactStep:
     """Single Thought→Action→Observation cycle."""
+
     thought: str
     action: str
     action_input: dict[str, Any]
@@ -88,6 +90,7 @@ class ReactStep:
 @dataclass
 class ReactResult:
     """Final result from the ReAct agent."""
+
     query: str
     final_answer: str
     steps: list[ReactStep] = field(default_factory=list)
@@ -100,13 +103,15 @@ class ReactResult:
 
 # ── Tool dispatch (shared with Executor) ─────────────────────────────────────
 
-REACT_ALLOWED_TOOLS = frozenset({
-    "query_timeseries",
-    "retrieve_documents",
-    "query_similar_incidents",
-    "get_well_metadata",
-    "get_equipment_status",
-})
+REACT_ALLOWED_TOOLS = frozenset(
+    {
+        "query_timeseries",
+        "retrieve_documents",
+        "query_similar_incidents",
+        "get_well_metadata",
+        "get_equipment_status",
+    }
+)
 
 
 async def _call_tool(
@@ -121,6 +126,7 @@ async def _call_tool(
     try:
         if tool_name == "query_timeseries":
             from src.tools.timeseries_query import query_timeseries
+
             result = await query_timeseries(
                 conn,
                 action_input.get("well_id", ""),
@@ -128,9 +134,11 @@ async def _call_tool(
             )
         elif tool_name == "retrieve_documents":
             from src.tools.rag_retrieval import retrieve_documents
+
             result = await retrieve_documents(conn, action_input.get("query", ""))
         elif tool_name == "query_similar_incidents":
             from src.tools.rag_retrieval import query_similar_incidents
+
             result = await query_similar_incidents(
                 conn,
                 action_input.get("description", ""),
@@ -138,9 +146,11 @@ async def _call_tool(
             )
         elif tool_name == "get_well_metadata":
             from src.tools.diagnostic_api import get_well_metadata
+
             result = await get_well_metadata(conn, action_input.get("well_id", ""))
         elif tool_name == "get_equipment_status":
             from src.tools.diagnostic_api import get_equipment_status
+
             result = await get_equipment_status(conn, action_input.get("well_id", ""))
         else:
             return "Unknown tool."
@@ -153,6 +163,7 @@ async def _call_tool(
 
 
 # ── Response parser ───────────────────────────────────────────────────────────
+
 
 def _parse_react_response(text: str) -> dict[str, Any]:
     """
@@ -196,6 +207,7 @@ def _parse_react_response(text: str) -> dict[str, Any]:
 
 
 # ── Main ReAct loop ───────────────────────────────────────────────────────────
+
 
 async def run_react(
     query: str,
@@ -305,7 +317,10 @@ async def run_react(
 
     logger.info(
         "ReAct complete: query='%s...' steps=%d tokens=%d latency=%.0fms",
-        query[:60], len(steps), total_tokens, elapsed_ms,
+        query[:60],
+        len(steps),
+        total_tokens,
+        elapsed_ms,
     )
 
     return ReactResult(
