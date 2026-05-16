@@ -8,6 +8,8 @@ Any attempt by an agent to call an unlisted tool is blocked and logged.
 
 from __future__ import annotations
 
+from src.safety.audit_log import AuditLogger
+
 AGENT_TOOL_PERMISSIONS: dict[str, frozenset[str]] = {
     "planner": frozenset(
         {
@@ -86,7 +88,7 @@ def get_permitted_tools(agent_id: str) -> list[str]:
 def validate_tool_call(
     agent_id: str,
     tool_name: str,
-    audit_logger: AuditLogger | None = None,  # noqa: F821
+    audit_logger: AuditLogger | None = None,
 ) -> tuple[bool, str]:
     """
     Validate a tool call, returning (is_permitted, reason).
