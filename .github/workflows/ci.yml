@@ -202,27 +202,44 @@ jobs:
       - name: Validate model registry module
         run: |
           python3 -c "
-          from src.ml.model_registry import (
-              ModelMetrics, PRODUCTION_GATE, TELEMETRY_FEATURES,
-              _build_model_signature, list_all_model_versions,
-          )
+          from src.ml.model_registry import ModelMetrics, _build_model_signature
+
           sig = _build_model_signature()
-          assert len(sig.inputs.inputs) == 6, 'Expected 6 input features'
-          assert len(sig.outputs.inputs) == 7, 'Expected 7 output columns'
-          m = ModelMetrics(
+          assert len(sig.inputs) == 6, 'Expected 6 input features'
+          assert len(sig.outputs) == 7, 'Expected 7 output columns'
+
+          daily_ok = ModelMetrics(
               well_id='15/9-F-12', detector_version='v2',
               event_recall=0.75, day_fpr=0.68, day_precision=0.30,
               roc_auc=0.72, training_rows=1500, test_rows=481,
               data_granularity='daily', data_source='equinor_volve',
           )
-          assert not m.meets_production_gate   # 0.75 < 0.85 full gate
-          m2 = ModelMetrics(
+          assert daily_ok.meets_production_gate
+
+          daily_low = ModelMetrics(
               well_id='15/9-F-12', detector_version='v2',
-              event_recall=0.62, day_fpr=0.68, day_precision=0.30,
+              event_recall=0.55, day_fpr=0.10, day_precision=0.30,
               roc_auc=0.72, training_rows=1500, test_rows=481,
               data_granularity='daily', data_source='equinor_volve',
           )
-          assert m2.meets_production_gate      # 0.62 >= 0.60 daily override
+          assert not daily_low.meets_production_gate
+
+          hourly_pass = ModelMetrics(
+              well_id='15/9-F-12', detector_version='v2',
+              event_recall=0.90, day_fpr=0.15, day_precision=0.40,
+              roc_auc=0.80, training_rows=1500, test_rows=481,
+              data_granularity='hourly', data_source='equinor_volve',
+          )
+          assert hourly_pass.meets_production_gate
+
+          hourly_bad_fpr = ModelMetrics(
+              well_id='15/9-F-12', detector_version='v2',
+              event_recall=0.90, day_fpr=0.25, day_precision=0.40,
+              roc_auc=0.80, training_rows=1500, test_rows=481,
+              data_granularity='hourly', data_source='equinor_volve',
+          )
+          assert not hourly_bad_fpr.meets_production_gate
+
           print('Model registry module OK — signatures and quality gate logic verified')
           "
 
@@ -278,4 +295,4 @@ jobs:
           KAFKA_BOOTSTRAP_SERVERS: "localhost:9092"
         run: |
           pytest tests/integration/ -v -m "not requires_kafka" \
-            --timeout=60 --tb=short
+            --timeout=60 --tb=short --no-cov

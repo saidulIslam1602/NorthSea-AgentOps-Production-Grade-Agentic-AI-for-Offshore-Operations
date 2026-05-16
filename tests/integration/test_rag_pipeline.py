@@ -3,10 +3,24 @@
 from __future__ import annotations
 
 import asyncio
+import os
 
 import pytest
 
 pytestmark = pytest.mark.integration
+
+
+def _openai_embeddings_configured() -> bool:
+    key = (os.environ.get("OPENAI_API_KEY") or "").strip()
+    if not key:
+        return False
+    return "placeholder" not in key.lower()
+
+
+skip_without_openai_embeddings = pytest.mark.skipif(
+    not _openai_embeddings_configured(),
+    reason="OpenAI embeddings require a non-placeholder OPENAI_API_KEY",
+)
 
 
 @pytest.fixture(scope="session")
@@ -30,6 +44,7 @@ async def db_conn():
     await conn.close()
 
 
+@skip_without_openai_embeddings
 @pytest.mark.asyncio
 async def test_retrieve_returns_citations(db_conn) -> None:
     """Retrieval should return citations for a well-known query."""
@@ -41,6 +56,7 @@ async def test_retrieve_returns_citations(db_conn) -> None:
     assert "weak_evidence" in result
 
 
+@skip_without_openai_embeddings
 @pytest.mark.asyncio
 async def test_retrieve_scores_in_range(db_conn) -> None:
     """All returned relevance scores should be between 0 and 1."""
