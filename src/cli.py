@@ -76,8 +76,7 @@ def ingest(
 
         docs_deleted, chunks_deleted = asyncio.run(_clear())
         console.print(
-            f"[yellow]Cleared vector store:[/yellow] "
-            f"{docs_deleted} document(s), {chunks_deleted} chunk(s) removed."
+            f"[yellow]Cleared vector store:[/yellow] {docs_deleted} document(s), {chunks_deleted} chunk(s) removed."
         )
 
     console.print(f"[bold]Ingesting documents[/bold] from {docs_dir}")

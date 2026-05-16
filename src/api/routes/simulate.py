@@ -154,10 +154,7 @@ async def simulate_anomaly(
         if request.scenario not in _SCENARIOS:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=(
-                    f"Unknown scenario '{request.scenario}'. "
-                    f"Valid options: {sorted(_SCENARIOS)}"
-                ),
+                detail=(f"Unknown scenario '{request.scenario}'. Valid options: {sorted(_SCENARIOS)}"),
             )
         scenario_data = _SCENARIOS[request.scenario]
 
@@ -171,21 +168,20 @@ async def simulate_anomaly(
         list(request.sensor_overrides.keys()) or ["oil_rate_bopd"],
     )
     deviation_pct: dict[str, float] = {
-        k: round((current_values[k] - _VOLVE_BASELINES.get(k, current_values[k]))
-                 / max(abs(_VOLVE_BASELINES.get(k, current_values[k])), 1e-9) * 100, 1)
+        k: round(
+            (current_values[k] - _VOLVE_BASELINES.get(k, current_values[k]))
+            / max(abs(_VOLVE_BASELINES.get(k, current_values[k])), 1e-9)
+            * 100,
+            1,
+        )
         for k in affected_features
         if k in current_values
     }
     deviation_pct.update(scenario_data.get("deviation_pct", {}))
 
-    severity = (
-        request.severity
-        or scenario_data.get("severity", SeverityLevel.MEDIUM)
-    )
+    severity = request.severity or scenario_data.get("severity", SeverityLevel.MEDIUM)
     anomaly_score = (
-        request.anomaly_score
-        if request.anomaly_score is not None
-        else scenario_data.get("anomaly_score", 0.75)
+        request.anomaly_score if request.anomaly_score is not None else scenario_data.get("anomaly_score", 0.75)
     )
     description = scenario_data.get(
         "description",
