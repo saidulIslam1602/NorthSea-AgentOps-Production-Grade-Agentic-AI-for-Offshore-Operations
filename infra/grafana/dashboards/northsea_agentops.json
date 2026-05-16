@@ -1,0 +1,106 @@
+{
+  "title": "NorthSea AgentOps — Production Dashboard",
+  "uid": "northsea-agentops-main",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Active Investigations",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "targets": [{ "expr": "agent_active_investigations", "legendFormat": "Active" }],
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "green", "value": 0 }, { "color": "yellow", "value": 3 }, { "color": "red", "value": 10 }] } }
+      }
+    },
+    {
+      "id": 2,
+      "title": "Escalation Rate (last 1h)",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "targets": [{ "expr": "rate(agent_escalations_total[1h]) * 3600", "legendFormat": "Escalations/hr" }],
+      "fieldConfig": {
+        "defaults": { "unit": "reqps", "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "green", "value": 0 }, { "color": "yellow", "value": 5 }, { "color": "red", "value": 20 }] } }
+      }
+    },
+    {
+      "id": 3,
+      "title": "Anomalies Detected (last 1h)",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "targets": [{ "expr": "sum(increase(anomaly_detected_total[1h]))", "legendFormat": "Anomalies" }],
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" } } }
+    },
+    {
+      "id": 4,
+      "title": "Prompt Injections Detected",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "targets": [{ "expr": "sum(prompt_injection_detected_total)", "legendFormat": "Injections" }],
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "green", "value": 0 }, { "color": "red", "value": 1 }] } }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Agent Confidence Score Distribution",
+      "type": "histogram",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "targets": [{ "expr": "agent_confidence_score_bucket", "legendFormat": "{{le}}" }]
+    },
+    {
+      "id": 6,
+      "title": "Investigation Duration (p50/p95/p99)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "targets": [
+        { "expr": "histogram_quantile(0.50, rate(agent_investigation_duration_seconds_bucket[5m]))", "legendFormat": "p50" },
+        { "expr": "histogram_quantile(0.95, rate(agent_investigation_duration_seconds_bucket[5m]))", "legendFormat": "p95" },
+        { "expr": "histogram_quantile(0.99, rate(agent_investigation_duration_seconds_bucket[5m]))", "legendFormat": "p99" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "id": 7,
+      "title": "Token Usage by Agent",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "targets": [{ "expr": "rate(agent_tokens_used_total[5m]) * 60", "legendFormat": "{{agent}}" }],
+      "fieldConfig": { "defaults": { "unit": "short" } }
+    },
+    {
+      "id": 8,
+      "title": "RAG Source Coverage Distribution",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "targets": [
+        { "expr": "histogram_quantile(0.50, rate(rag_source_coverage_bucket[5m]))", "legendFormat": "p50 coverage" },
+        { "expr": "histogram_quantile(0.10, rate(rag_source_coverage_bucket[5m]))", "legendFormat": "p10 (weak evidence)" }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Anomalies by Severity",
+      "type": "piechart",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 20 },
+      "targets": [{ "expr": "sum(anomaly_detected_total) by (severity)", "legendFormat": "{{severity}}" }]
+    },
+    {
+      "id": 10,
+      "title": "Escalations by Reason",
+      "type": "piechart",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 20 },
+      "targets": [{ "expr": "sum(agent_escalations_total) by (reason)", "legendFormat": "{{reason}}" }]
+    },
+    {
+      "id": 11,
+      "title": "HTTP Request Rate",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 20 },
+      "targets": [{ "expr": "rate(http_requests_total[1m])", "legendFormat": "{{method}} {{route}}" }]
+    }
+  ]
+}

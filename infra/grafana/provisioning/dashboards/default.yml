@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: "NorthSea AgentOps"
+    orgId: 1
+    folder: "NorthSea"
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    options:
+      path: /var/lib/grafana/dashboards

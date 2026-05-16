@@ -1,0 +1,170 @@
+version: "3.9"
+
+services:
+  # ─── Databases ────────────────────────────────────────────────────────────────
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: northsea_postgres
+    environment:
+      POSTGRES_USER: northsea
+      POSTGRES_PASSWORD: northsea_dev
+      POSTGRES_DB: northsea_agentops
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U northsea -d northsea_agentops"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Kafka ────────────────────────────────────────────────────────────────────
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.7.0
+    container_name: northsea_zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo ruok | nc localhost 2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  kafka:
+    image: confluentinc/cp-kafka:7.7.0
+    container_name: northsea_kafka
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    ports:
+      - "9092:9092"
+      - "9101:9101"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_JMX_PORT: 9101
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: northsea_kafka_ui
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8090:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: northsea-local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+
+  # ─── Observability ────────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: northsea_prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/etc/prometheus/console_libraries"
+      - "--web.console.templates=/etc/prometheus/consoles"
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: northsea_grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: northsea_dev
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning
+      - ./infra/grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      - prometheus
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.108.0
+    container_name: northsea_otel
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "8888:8888"   # Metrics
+    volumes:
+      - ./infra/otel/otel-collector.yml:/etc/otel-collector.yml
+    command: ["--config=/etc/otel-collector.yml"]
+    depends_on:
+      - prometheus
+
+  # ─── MLflow ───────────────────────────────────────────────────────────────────
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.16.0
+    container_name: northsea_mlflow
+    ports:
+      - "5001:5000"
+    environment:
+      MLFLOW_BACKEND_STORE_URI: postgresql://northsea:northsea_dev@postgres:5432/northsea_agentops
+      MLFLOW_DEFAULT_ARTIFACT_ROOT: /mlflow/artifacts
+    volumes:
+      - mlflow_data:/mlflow/artifacts
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >
+      mlflow server
+      --backend-store-uri postgresql://northsea:northsea_dev@postgres:5432/northsea_agentops
+      --default-artifact-root /mlflow/artifacts
+      --host 0.0.0.0
+      --port 5000
+
+  # ─── Application ──────────────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: northsea_api
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg://northsea:northsea_dev@postgres:5432/northsea_agentops
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    volumes:
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres_data:
+  prometheus_data:
+  grafana_data:
+  mlflow_data:

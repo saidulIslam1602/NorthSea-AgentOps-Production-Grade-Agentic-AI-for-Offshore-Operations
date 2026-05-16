@@ -1,0 +1,183 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: northsea-agentops-api
+  namespace: northsea
+  labels:
+    app: northsea-agentops
+    component: api
+    version: "0.1.0"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: northsea-agentops
+      component: api
+  template:
+    metadata:
+      labels:
+        app: northsea-agentops
+        component: api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: northsea-agentops
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+
+      containers:
+        - name: api
+          image: ghcr.io/your-org/northsea-agentops:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+              name: http
+
+          env:
+            - name: APP_ENV
+              value: "production"
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: northsea-secrets
+                  key: openai-api-key
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: northsea-secrets
+                  key: database-url
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              valueFrom:
+                configMapKeyRef:
+                  name: northsea-config
+                  key: kafka-bootstrap-servers
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: northsea-config
+                  key: otel-endpoint
+
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "2"
+              memory: "2Gi"
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 20
+            periodSeconds: 30
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: northsea-agentops
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: northsea-agentops-api
+  namespace: northsea
+  labels:
+    app: northsea-agentops
+    component: api
+spec:
+  selector:
+    app: northsea-agentops
+    component: api
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8000
+  type: ClusterIP
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: northsea-agentops-ingress
+  namespace: northsea
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - agentops.northsea.internal
+      secretName: northsea-tls
+  rules:
+    - host: agentops.northsea.internal
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: northsea-agentops-api
+                port:
+                  number: 80
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: northsea-agentops-hpa
+  namespace: northsea
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: northsea-agentops-api
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: northsea-config
+  namespace: northsea
+data:
+  kafka-bootstrap-servers: "kafka.northsea.svc.cluster.local:9092"
+  otel-endpoint: "http://otel-collector.observability.svc.cluster.local:4318"
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: northsea-agentops
+  namespace: northsea
