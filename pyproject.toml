@@ -92,7 +92,6 @@ dev = [
 [project.scripts]
 agentops = "src.cli:app"
 ingest = "src.rag.ingestion:main"
-generate-data = "src.data.synthetic_generator:main"
 run-eval = "eval.ragas_eval:main"
 
 [tool.ruff]

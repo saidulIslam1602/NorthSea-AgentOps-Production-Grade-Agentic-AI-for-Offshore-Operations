@@ -2,11 +2,14 @@
 Command-line interface for NorthSea AgentOps.
 
 Entry points:
-  agentops serve      — Start the FastAPI server
-  agentops ingest     — Ingest documents into the RAG vector store
-  agentops generate   — Generate synthetic telemetry / documents
-  agentops eval       — Run RAGAS evaluation suite
-  agentops migrate    — Apply database migrations (Alembic)
+  agentops serve          — Start the FastAPI server
+  agentops ingest         — Ingest documents into the RAG vector store
+  agentops detector-eval — Run anomaly detector train/eval (Volve, scripts/train_detector_v2.py)
+  agentops evaluate       — Run RAGAS evaluation suite
+  agentops migrate        — Apply database migrations (Alembic)
+
+Synthetic telemetry/doc generation was removed — use real data under data/Volve_Data/
+and corpus files under data/docs/. See README.md.
 """
 
 from __future__ import annotations
@@ -60,26 +63,17 @@ def ingest(
     ingest_main()
 
 
-@app.command()
-def generate(
-    output_dir: Path = typer.Option(
-        Path("data"), "--output-dir", "-o", help="Output directory for generated data"
-    ),
-    num_wells: int = typer.Option(5, "--wells", help="Number of wells to simulate"),
-    days: int = typer.Option(30, "--days", help="Number of days of telemetry to generate"),
-    docs: bool = typer.Option(True, "--docs/--no-docs", help="Generate synthetic documents"),
-) -> None:
-    """Generate synthetic telemetry data and well documents."""
-    from src.data.synthetic_generator import main as gen_main
-
-    console.print(f"[bold]Generating synthetic data[/bold] — {num_wells} wells × {days} days")
-    gen_main()
-
-    if docs:
-        from src.data.doc_generator import generate_all_documents
-
-        console.print("[bold]Generating synthetic operational documents[/bold]")
-        generate_all_documents()
+@app.command("detector-eval")
+def detector_eval() -> None:
+    """Train and evaluate anomaly detectors v1 vs v2 on real Volve data (writes eval/detector_performance_v2.json)."""
+    repo_root = Path(__file__).resolve().parents[1]
+    script = repo_root / "scripts" / "train_detector_v2.py"
+    if not script.is_file():
+        console.print("[red]scripts/train_detector_v2.py not found — run from repo root[/red]")
+        raise typer.Exit(code=2)
+    console.print(f"[bold]Running detector evaluation[/bold]: {script}")
+    result = subprocess.run([sys.executable, str(script)], cwd=str(repo_root))
+    raise typer.Exit(code=result.returncode)
 
 
 @app.command()
