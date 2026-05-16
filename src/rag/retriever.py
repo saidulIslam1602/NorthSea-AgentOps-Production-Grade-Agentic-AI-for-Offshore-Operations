@@ -130,7 +130,9 @@ def _field_overview_injection_heuristic(query: str) -> bool:
     superlative_well = ("highest" in ql or "lowest" in ql or "maximum" in ql or "minimum" in ql or "max " in ql) and (
         "well" in ql or "producer" in ql
     ) and ("peak" in ql or "oil" in ql or "bopd" in ql)
-    comparison = ("compare" in ql or "rank" in ql or "versus" in ql or " vs " in ql) and ("well" in ql or "producer" in ql)
+    comparison = ("compare" in ql or "rank" in ql or "versus" in ql or " vs " in ql) and (
+        "well" in ql or "producer" in ql
+    )
     return cross_well_peak or superlative_well or comparison
 
 
